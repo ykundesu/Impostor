@@ -170,8 +170,17 @@ public sealed class GamesController : ControllerBase
     [HttpGet("all")]
     public IActionResult GetAllPublicGames()
     {
-        var games = _gameManager.Games.Select(GameListing.From).ToList();
-        return Ok(games);
+        var gameListings = _gameManager.Games.Select(GameListing.From).ToList();
+        var response = new
+        {
+            games = gameListings,
+            metadata = new
+            {
+                allGamesCount = _gameManager.Games.Count(),
+                matchingGamesCount = gameListings.Count,
+            },
+        };
+        return Ok(response);
     }
 
     private static uint ConvertAddressToNumber(IPAddress address)
