@@ -106,7 +106,7 @@ public sealed class GamesController : ControllerBase
         return Ok(_hostServer);
     }
 
-    [HttpGet("{gameId}")]
+    [HttpGet("{gameId:int}")]
     public IActionResult Show([FromRoute] int gameId)
     {
         var code = new GameCode(gameId);
