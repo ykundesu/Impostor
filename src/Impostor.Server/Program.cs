@@ -32,6 +32,7 @@ using Microsoft.Extensions.ObjectPool;
 using Serilog;
 using Serilog.Events;
 using Serilog.Settings.Configuration;
+using Microsoft.AspNetCore.Cors;
 
 namespace Impostor.Server
 {
@@ -145,6 +146,18 @@ namespace Impostor.Server
                     services.AddSingleton<IEventManager, EventManager>();
                     services.AddSingleton<Matchmaker>();
                     services.AddHostedService<MatchmakerService>();
+
+                    // Add CORS services
+                    services.AddCors(options =>
+                    {
+                        options.AddPolicy("AllowAll",
+                            builder =>
+                            {
+                                builder.AllowAnyOrigin()
+                                       .AllowAnyHeader()
+                                       .AllowAnyMethod();
+                            });
+                    });
                 })
                 .UseSerilog((context, loggerConfiguration) =>
                 {
@@ -220,6 +233,9 @@ namespace Impostor.Server
                         }
 
                         app.UseRouting();
+
+                        // Use CORS middleware
+                        app.UseCors("AllowAll");
 
                         app.UseEndpoints(endpoints =>
                         {
