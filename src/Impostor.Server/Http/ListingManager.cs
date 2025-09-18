@@ -221,11 +221,6 @@ public sealed class ListingManager
             return false;
         }
 
-        if (language != game.Options.Keywords)
-        {
-            return false;
-        }
-
         if (impostorCount != 0 && game.Options.NumImpostors != impostorCount)
         {
             return false;
