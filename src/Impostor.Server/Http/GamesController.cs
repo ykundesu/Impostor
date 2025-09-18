@@ -167,6 +167,13 @@ public sealed class GamesController : ControllerBase
         }
     }
 
+    [HttpGet("all")]
+    public IActionResult GetAllPublicGames()
+    {
+        var games = _gameManager.Games.Select(GameListing.From).ToList();
+        return Ok(games);
+    }
+
     private static uint ConvertAddressToNumber(IPAddress address)
     {
 #pragma warning disable CS0618 // Among Us only supports IPv4
