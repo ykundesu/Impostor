@@ -153,13 +153,6 @@ public sealed class ListingManager
                             }
 
                             break;
-                        case "languages":
-                            if (filter.SubFilter is LanguageFilter langFilter && game.Options.Keywords != (GameKeywords)langFilter.AcceptedValues)
-                            {
-                                matchesAllFilters = false;
-                            }
-
-                            break;
                         case "int":
                             if (filter.SubFilter is IntGameFilter intFilter)
                             {

@@ -138,7 +138,6 @@ public sealed class GamesController : ControllerBase
             // Vanilla game only builds one filterSet and InnerSloth officials only handles first one (though you can send multiple filter sets. sloths only handle the first)
             if (filtersList == null || filtersList.FilterSets.Count != 1
                 || filtersList.FilterSets[0].Filters.Count < 2
-                || !filtersList.FilterSets[0].Filters.Any(x => x.OptionType == "languages")
                 || !filtersList.FilterSets[0].Filters.Any(x => x.OptionType == "chat"))
             {
                 return BadRequest(new MatchmakerResponse(new MatchmakerError(DisconnectReason.ServerError, "Invaild filterSets")));
