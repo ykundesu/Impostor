@@ -106,7 +106,12 @@ namespace Impostor.Server.Net.State
                         var netId = reader.ReadPackedUInt32();
                         if (_allObjectsFast.TryGetValue(netId, out var obj))
                         {
+                            try{
                             await obj.DeserializeAsync(sender, target, reader, false);
+                            } catch (Exception e)
+                            {
+                                _logger.LogError(e, "Error deserializing {0}", obj.GetType().Name);
+                            }
                         }
                         else
                         {

@@ -135,50 +135,62 @@ namespace Impostor.Server.Net.Inner.Objects
 
         public override ValueTask DeserializeAsync(IClientPlayer sender, IClientPlayer? target, IMessageReader reader, bool initialState)
         {
+            _logger.LogInformation("DeserializeAsync");
             PlayerId = reader.ReadByte();
+            _logger.LogInformation("PlayerId: {PlayerId}", PlayerId);
             ClientId = reader.ReadPackedInt32();
+            _logger.LogInformation("ClientId: {ClientId}", ClientId);
 
             Outfits.Clear();
             var b = reader.ReadByte();
+            _logger.LogInformation("b: {b}", b);
             for (var i = 0; i < b; i++)
             {
                 var key = (PlayerOutfitType)reader.ReadByte();
+                _logger.LogInformation("key: {key}", key);
                 Outfits[key] = new PlayerOutfit();
                 Outfits[key].Deserialize(reader);
             }
+            _logger.LogInformation("Outfits: {Outfits}", Outfits);
 
             PlayerLevel = reader.ReadPackedUInt32();
+            _logger.LogInformation("PlayerLevel: {PlayerLevel}", PlayerLevel);
 
             var flag = reader.ReadByte();
+            _logger.LogInformation("flag: {flag}", flag);
             Disconnected = (flag & 1) != 0;
+            _logger.LogInformation("Disconnected: {Disconnected}", Disconnected);
             IsDead = (flag & 4) != 0;
+            _logger.LogInformation("IsDead: {IsDead}", IsDead);
 
             // Ignore the RoleType here and only trust the SetRole RPC, as
             // RoleType is not nullable in vanilla, while Impostor checks game
             // starts based on assigned roles.
             _ = (RoleTypes)reader.ReadUInt16();
-
+            _logger.LogInformation("RoleType: {RoleType}", RoleType?.ToString());
             if (reader.ReadBoolean())
             {
                 RoleWhenAlive = (RoleTypes)reader.ReadUInt16();
+                _logger.LogInformation("RoleWhenAlive: {RoleWhenAlive}", RoleWhenAlive?.ToString());
             }
-
+            _logger.LogInformation("RoleWhenAlive: {RoleWhenAlive}", RoleWhenAlive?.ToString());
             var taskCount = reader.ReadByte();
-
+            _logger.LogInformation("taskCount: {taskCount}", taskCount);
             if (Tasks.Count < taskCount)
             {
                 taskCount = (byte)Tasks.Count;
             }
-
+            _logger.LogInformation("taskCount: {taskCount}", taskCount);
             for (var i = 0; i < taskCount; i++)
             {
                 Tasks[i].Deserialize(reader);
             }
-
+            _logger.LogInformation("Tasks: {Tasks}", Tasks);
             // Impostor doesn't expose fields that aren't properly validated
-            reader.ReadString(); // FriendCode
-            reader.ReadString(); // PUID
-
+            var FriendCode = reader.ReadString(); // FriendCode
+            var PUID = reader.ReadString(); // PUID
+            _logger.LogInformation("FriendCode: {FriendCode}", FriendCode ?? "null");
+            _logger.LogInformation("PUID: {PUID}", PUID ?? "null");
             return ValueTask.CompletedTask;
         }
 
