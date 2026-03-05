@@ -13,6 +13,16 @@ namespace Impostor.Api.Net.Inner.Objects
         string PlayerName { get; }
 
         /// <summary>
+        ///     Gets the friend code the client reports for this player.
+        /// </summary>
+        string FriendCode { get; }
+
+        /// <summary>
+        ///     Gets the product user id (PUID) the client reports for this player.
+        /// </summary>
+        string ProductUserId { get; }
+
+        /// <summary>
         ///     Gets the role type of the player.
         /// </summary>
         RoleTypes? RoleType { get; }

@@ -36,6 +36,10 @@ namespace Impostor.Server.Net.Inner.Objects
 
         public string PlayerName => CurrentOutfit.PlayerName;
 
+        public string FriendCode { get; private set; } = string.Empty;
+
+        public string ProductUserId { get; private set; } = string.Empty;
+
         public Dictionary<PlayerOutfitType, PlayerOutfit> Outfits { get; } = new()
         {
             [PlayerOutfitType.Default] = new PlayerOutfit(),
@@ -187,10 +191,10 @@ namespace Impostor.Server.Net.Inner.Objects
             }
             _logger.LogInformation("Tasks: {Tasks}", Tasks);
             // Impostor doesn't expose fields that aren't properly validated
-            var FriendCode = reader.ReadString(); // FriendCode
-            var PUID = reader.ReadString(); // PUID
-            _logger.LogInformation("FriendCode: {FriendCode}", FriendCode ?? "null");
-            _logger.LogInformation("PUID: {PUID}", PUID ?? "null");
+            FriendCode = reader.ReadString() ?? string.Empty; // FriendCode
+            ProductUserId = reader.ReadString() ?? string.Empty; // PUID
+            _logger.LogInformation("FriendCode: {FriendCode}", FriendCode);
+            _logger.LogInformation("PUID: {PUID}", ProductUserId);
             return ValueTask.CompletedTask;
         }
 
