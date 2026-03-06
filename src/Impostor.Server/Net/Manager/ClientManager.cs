@@ -139,14 +139,15 @@ namespace Impostor.Server.Net.Manager
 
             if (_matchmakingTokenTracker.TryMatch(connection.EndPoint.Address, name, clientVersion, out var tokenRecord))
             {
-                client.Items[MatchmakingTokenTracker.ClientItemKey] = tokenRecord;
+                var matchedTokenRecord = tokenRecord!;
+                client.Items[MatchmakingTokenTracker.ClientItemKey] = matchedTokenRecord;
                 _logger.LogInformation(
                     "Client {Name} ({Id}) matched recent HTTP token: puid={ProductUserId}, ip={IpAddress}, issuedAt={IssuedAt:O}",
                     name,
                     id,
-                    tokenRecord!.ProductUserId,
+                    matchedTokenRecord.ProductUserId,
                     connection.EndPoint.Address,
-                    tokenRecord.IssuedAt);
+                    matchedTokenRecord.IssuedAt);
             }
 
             await _eventManager.CallAsync(new ClientConnectedEvent(connection, client));
