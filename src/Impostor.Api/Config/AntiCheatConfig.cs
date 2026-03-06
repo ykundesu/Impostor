@@ -22,6 +22,8 @@ namespace Impostor.Api.Config
 
         public bool EnableOwnershipChecks { get; set; } = true;
 
+        public bool EnableVoteBanOwnershipChecks { get; set; } = true;
+
         public bool EnableRoleChecks { get; set; } = true;
 
         public bool EnableTargetChecks { get; set; } = true;

@@ -68,18 +68,65 @@ namespace Impostor.Server.Net.Inner.Objects.Components
             {
                 Rpc26AddVote.Deserialize(reader, out var clientId, out var targetClientId);
 
+                var actualSender = GetPlayerIdentity(sender.Client.Id);
+                var claimedVoter = GetPlayerIdentity(clientId);
+                var voteTarget = GetPlayerIdentity(targetClientId);
+
                 if (clientId != sender.Client.Id)
                 {
-                    if (await sender.Client.ReportCheatAsync(RpcCalls.AddVote, CheatCategory.Ownership, $"Client sent {nameof(RpcCalls.AddVote)} as other client"))
+                    _logger.LogWarning(
+                        "VoteBan AddVote spoof: actualSenderId={ActualSenderId} actualSenderName={ActualSenderName} actualSenderFriendCode={ActualSenderFriendCode} actualSenderPuid={ActualSenderPuid} claimedVoterId={ClaimedVoterId} claimedVoterName={ClaimedVoterName} claimedVoterFriendCode={ClaimedVoterFriendCode} claimedVoterPuid={ClaimedVoterPuid} targetId={TargetId} targetName={TargetName} targetFriendCode={TargetFriendCode} targetPuid={TargetPuid}",
+                        actualSender.ClientId,
+                        actualSender.Name,
+                        actualSender.FriendCode,
+                        actualSender.ProductUserId,
+                        claimedVoter.ClientId,
+                        claimedVoter.Name,
+                        claimedVoter.FriendCode,
+                        claimedVoter.ProductUserId,
+                        voteTarget.ClientId,
+                        voteTarget.Name,
+                        voteTarget.FriendCode,
+                        voteTarget.ProductUserId);
+
+                    if (await sender.Client.ReportCheatAsync(RpcCalls.AddVote, CheatCategory.VoteBanOwnership, $"Client sent {nameof(RpcCalls.AddVote)} as other client"))
                     {
                         return false;
                     }
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "VoteBan AddVote: voterId={VoterId} voterName={VoterName} voterFriendCode={VoterFriendCode} voterPuid={VoterPuid} targetId={TargetId} targetName={TargetName} targetFriendCode={TargetFriendCode} targetPuid={TargetPuid}",
+                        claimedVoter.ClientId,
+                        claimedVoter.Name,
+                        claimedVoter.FriendCode,
+                        claimedVoter.ProductUserId,
+                        voteTarget.ClientId,
+                        voteTarget.Name,
+                        voteTarget.FriendCode,
+                        voteTarget.ProductUserId);
                 }
 
                 return true;
             }
 
             return await base.HandleRpcAsync(sender, target, call, reader);
+        }
+
+        private (int ClientId, string Name, string FriendCode, string ProductUserId) GetPlayerIdentity(int clientId)
+        {
+            if (!Game.TryGetPlayer(clientId, out var player))
+            {
+                return (clientId, "<unknown>", "<unknown>", "<unknown>");
+            }
+
+            var playerInfo = player.Character?.PlayerInfo;
+            var name = string.IsNullOrWhiteSpace(playerInfo?.PlayerName) ? player.Client.Name : playerInfo.PlayerName;
+            var friendCode = string.IsNullOrWhiteSpace(playerInfo?.FriendCode) ? "<unknown>" : playerInfo.FriendCode;
+            var productUserId = string.IsNullOrWhiteSpace(playerInfo?.ProductUserId) ? "<unknown>" : playerInfo.ProductUserId;
+
+            return (player.Client.Id, name, friendCode, productUserId);
         }
     }
 }

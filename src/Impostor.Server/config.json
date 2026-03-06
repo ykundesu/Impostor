@@ -19,6 +19,7 @@
     "EnableColorLimitChecks": true,
     "EnableNameLimitChecks": true,
     "EnableOwnershipChecks": true,
+    "EnableVoteBanOwnershipChecks": true,
     "EnableRoleChecks": true,
     "EnableTargetChecks": true,
     "ForbidProtocolExtensions": true

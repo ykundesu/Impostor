@@ -20,6 +20,9 @@ public enum CheatCategory
     /// <summary>A packet was sent on behalf of another player.</summary>
     Ownership,
 
+    /// <summary>A VoteBan packet was sent on behalf of another player.</summary>
+    VoteBanOwnership,
+
     /// <summary>An ability was used that the current role cannot access.</summary>
     Role,
 
