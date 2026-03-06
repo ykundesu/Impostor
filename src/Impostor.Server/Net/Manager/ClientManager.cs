@@ -10,6 +10,7 @@ using Impostor.Api.Net;
 using Impostor.Api.Net.Manager;
 using Impostor.Hazel;
 using Impostor.Server.Events.Client;
+using Impostor.Server.Http;
 using Impostor.Server.Net.Factories;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -24,9 +25,10 @@ namespace Impostor.Server.Net.Manager
         private readonly ICompatibilityManager _compatibilityManager;
         private readonly CompatibilityConfig _compatibilityConfig;
         private readonly IClientFactory _clientFactory;
+        private readonly MatchmakingTokenTracker _matchmakingTokenTracker;
         private int _idLast;
 
-        public ClientManager(ILogger<ClientManager> logger, IEventManager eventManager, IClientFactory clientFactory, ICompatibilityManager compatibilityManager, IOptions<CompatibilityConfig> compatibilityConfig)
+        public ClientManager(ILogger<ClientManager> logger, IEventManager eventManager, IClientFactory clientFactory, ICompatibilityManager compatibilityManager, IOptions<CompatibilityConfig> compatibilityConfig, MatchmakingTokenTracker matchmakingTokenTracker)
         {
             _logger = logger;
             _eventManager = eventManager;
@@ -34,6 +36,7 @@ namespace Impostor.Server.Net.Manager
             _clients = new ConcurrentDictionary<int, ClientBase>();
             _compatibilityManager = compatibilityManager;
             _compatibilityConfig = compatibilityConfig.Value;
+            _matchmakingTokenTracker = matchmakingTokenTracker;
 
             if (_compatibilityConfig.AllowFutureGameVersions
                 || _compatibilityConfig.AllowHostAuthority
@@ -133,6 +136,18 @@ namespace Impostor.Server.Net.Manager
             client.Id = id;
             _logger.LogTrace("Client connected.");
             _clients.TryAdd(id, client);
+
+            if (_matchmakingTokenTracker.TryMatch(connection.EndPoint.Address, name, clientVersion, out var tokenRecord))
+            {
+                client.Items[MatchmakingTokenTracker.ClientItemKey] = tokenRecord;
+                _logger.LogInformation(
+                    "Client {Name} ({Id}) matched recent HTTP token: puid={ProductUserId}, ip={IpAddress}, issuedAt={IssuedAt:O}",
+                    name,
+                    id,
+                    tokenRecord!.ProductUserId,
+                    connection.EndPoint.Address,
+                    tokenRecord.IssuedAt);
+            }
 
             await _eventManager.CallAsync(new ClientConnectedEvent(connection, client));
         }

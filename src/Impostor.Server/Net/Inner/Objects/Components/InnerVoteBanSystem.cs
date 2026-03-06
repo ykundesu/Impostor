@@ -7,6 +7,7 @@ using Impostor.Api.Net.Custom;
 using Impostor.Api.Net.Inner;
 using Impostor.Api.Net.Inner.Objects;
 using Impostor.Api.Net.Messages.Rpcs;
+using Impostor.Server.Http;
 using Impostor.Server.Net.State;
 using Microsoft.Extensions.Logging;
 
@@ -125,9 +126,31 @@ namespace Impostor.Server.Net.Inner.Objects.Components
             var playerInfo = player.Character?.PlayerInfo;
             var name = string.IsNullOrWhiteSpace(playerInfo?.PlayerName) ? player.Client.Name : playerInfo.PlayerName;
             var friendCode = string.IsNullOrWhiteSpace(playerInfo?.FriendCode) ? "<unknown>" : playerInfo.FriendCode;
-            var productUserId = string.IsNullOrWhiteSpace(playerInfo?.ProductUserId) ? "<unknown>" : playerInfo.ProductUserId;
+            var productUserId = GetTrackedProductUserId(player, playerInfo);
 
             return (player.Client.Id, name, friendCode, productUserId);
+        }
+
+        private static string GetTrackedProductUserId(IClientPlayer player, IInnerPlayerInfo? playerInfo)
+        {
+            var reportedProductUserId = string.IsNullOrWhiteSpace(playerInfo?.ProductUserId) ? null : playerInfo.ProductUserId;
+
+            if (!MatchmakingTokenTracker.TryGetMatchedToken(player.Client, out var tokenRecord))
+            {
+                return reportedProductUserId ?? "<unknown>";
+            }
+
+            if (string.IsNullOrWhiteSpace(reportedProductUserId))
+            {
+                return tokenRecord!.ProductUserId;
+            }
+
+            if (!string.Equals(reportedProductUserId, tokenRecord!.ProductUserId, StringComparison.Ordinal))
+            {
+                return $"{reportedProductUserId} [token:{tokenRecord.ProductUserId}]";
+            }
+
+            return reportedProductUserId;
         }
     }
 }

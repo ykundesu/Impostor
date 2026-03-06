@@ -136,6 +136,7 @@ namespace Impostor.Server
                     services.AddSingleton<GameManager>();
                     services.AddSingleton<IGameManager>(p => p.GetRequiredService<GameManager>());
                     services.AddSingleton<ListingManager>();
+                    services.AddSingleton<MatchmakingTokenTracker>();
 
                     services.AddEventPools();
                     services.AddHazel();

@@ -11,6 +11,7 @@ using Impostor.Api.Net.Custom;
 using Impostor.Api.Net.Inner;
 using Impostor.Api.Net.Messages.Rpcs;
 using Impostor.Api.Utils;
+using Impostor.Server.Http;
 using Impostor.Server.Net.State;
 using Microsoft.Extensions.Logging;
 
@@ -195,6 +196,26 @@ namespace Impostor.Server.Net.Inner.Objects
             ProductUserId = reader.ReadString() ?? string.Empty; // PUID
             _logger.LogInformation("FriendCode: {FriendCode}", FriendCode);
             _logger.LogInformation("PUID: {PUID}", ProductUserId);
+
+            if (sender.Client.Id == ClientId && MatchmakingTokenTracker.TryGetMatchedToken(sender.Client, out var tokenRecord))
+            {
+                if (string.IsNullOrWhiteSpace(ProductUserId))
+                {
+                    _logger.LogInformation(
+                        "ClientId {ClientId} reported an empty in-game PUID. Matched HTTP token PUID: {TokenPuid}",
+                        ClientId,
+                        tokenRecord!.ProductUserId);
+                }
+                else if (!string.Equals(ProductUserId, tokenRecord!.ProductUserId, StringComparison.Ordinal))
+                {
+                    _logger.LogWarning(
+                        "ClientId {ClientId} PUID mismatch. HTTP token PUID: {TokenPuid}, in-game PUID: {ReportedPuid}",
+                        ClientId,
+                        tokenRecord.ProductUserId,
+                        ProductUserId);
+                }
+            }
+
             return ValueTask.CompletedTask;
         }
 
