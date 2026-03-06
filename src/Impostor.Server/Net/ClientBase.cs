@@ -11,6 +11,11 @@ namespace Impostor.Server.Net
 {
     internal abstract class ClientBase : IClient
     {
+        private readonly object _pendingDisconnectLock = new object();
+        private DisconnectReason? _pendingDisconnectReason;
+        private string? _pendingDisconnectDetail;
+        private string? _pendingCustomDisconnectMessage;
+
         protected ClientBase(string name, GameVersion gameVersion, Language language, QuickChatModes chatMode, PlatformSpecificData platformSpecificData, IHazelConnection connection)
         {
             Name = name;
@@ -60,7 +65,73 @@ namespace Impostor.Server.Net
 
         public async ValueTask DisconnectAsync(DisconnectReason reason, string? message = null)
         {
+            if (!Connection.IsConnected)
+            {
+                return;
+            }
+
+            var detail = GetPendingDisconnectDetail(reason);
+
+            lock (_pendingDisconnectLock)
+            {
+                _pendingDisconnectReason = reason;
+                _pendingDisconnectDetail = detail;
+                _pendingCustomDisconnectMessage = reason == DisconnectReason.Custom ? message : null;
+            }
+
             await Connection.CustomDisconnectAsync(reason, message);
+        }
+
+        internal async ValueTask DisconnectWithReasonDetailAsync(DisconnectReason reason, string detail, string? message = null)
+        {
+            if (!Connection.IsConnected)
+            {
+                return;
+            }
+
+            SetPendingDisconnectDetail(reason, detail);
+
+            lock (_pendingDisconnectLock)
+            {
+                _pendingDisconnectReason = reason;
+                _pendingDisconnectDetail = detail;
+                _pendingCustomDisconnectMessage = reason == DisconnectReason.Custom ? message : null;
+            }
+
+            await Connection.CustomDisconnectAsync(reason, message);
+        }
+
+        internal void SetPendingDisconnectDetail(DisconnectReason reason, string detail)
+        {
+            lock (_pendingDisconnectLock)
+            {
+                _pendingDisconnectReason = reason;
+                _pendingDisconnectDetail = detail;
+            }
+        }
+
+        internal string? GetPendingDisconnectDetail(DisconnectReason reason)
+        {
+            lock (_pendingDisconnectLock)
+            {
+                return _pendingDisconnectReason == reason ? _pendingDisconnectDetail : null;
+            }
+        }
+
+        protected (DisconnectReason? Reason, string? Detail, string? CustomMessage) ConsumePendingDisconnectContext()
+        {
+            lock (_pendingDisconnectLock)
+            {
+                var reason = _pendingDisconnectReason;
+                var detail = _pendingDisconnectDetail;
+                var customMessage = _pendingCustomDisconnectMessage;
+
+                _pendingDisconnectReason = null;
+                _pendingDisconnectDetail = null;
+                _pendingCustomDisconnectMessage = null;
+
+                return (reason, detail, customMessage);
+            }
         }
 
         public bool Equals(IClient? other)

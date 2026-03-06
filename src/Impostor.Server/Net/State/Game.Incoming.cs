@@ -79,9 +79,10 @@ namespace Impostor.Server.Net.State
             await SendToAllExceptAsync(packet, playerId);
         }
 
-        public async ValueTask HandleKickPlayer(int playerId, bool isBan)
+        public async ValueTask HandleKickPlayer(int playerId, bool isBan, ClientPlayer? source = null)
         {
             _logger.LogInformation("{0} - Player {1} has left.", Code, playerId);
+            var disconnectDetail = BuildRemovalDisconnectDetail(playerId, isBan, source);
 
             using var message = MessageWriter.Get(MessageType.Reliable);
 
@@ -89,7 +90,7 @@ namespace Impostor.Server.Net.State
             WriteKickPlayerMessage(message, false, playerId, isBan);
 
             await SendToAllAsync(message);
-            await PlayerRemove(playerId, isBan);
+            await PlayerRemove(playerId, isBan, disconnectDetail);
 
             // Remove the player from everyone's game.
             WriteRemovePlayerMessage(
@@ -152,8 +153,9 @@ namespace Impostor.Server.Net.State
         private async ValueTask<GameJoinResult> AddClientSafeAsync(ClientBase client)
         {
             // Check if the IP of the player is banned.
-            if (_bannedIps.Contains(client.Connection.EndPoint.Address))
+            if (TryGetBanDetail(client.Connection.EndPoint.Address, out var banDetail))
             {
+                client.SetPendingDisconnectDetail(DisconnectReason.Banned, banDetail ?? "Join denied: player is banned from this lobby.");
                 return GameJoinResult.FromError(GameJoinError.Banned);
             }
 

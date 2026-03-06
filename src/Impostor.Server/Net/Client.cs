@@ -104,7 +104,10 @@ namespace Impostor.Server.Net
                  For questions, contact your server admin and share the following code: {supportCode}.
                  """;
 
-            await DisconnectAsync(DisconnectReason.Custom, disconnectMessage);
+            await DisconnectWithReasonDetailAsync(
+                DisconnectReason.Custom,
+                $"Anticheat enforcement: [{context.Name}-{category}] {message}",
+                disconnectMessage);
 
             return true;
         }
@@ -162,7 +165,9 @@ namespace Impostor.Server.Net
                             await DisconnectAsync(DisconnectReason.Custom, "Client is in an invalid state.");
                             break;
                         case GameJoinError.Banned:
-                            await DisconnectAsync(DisconnectReason.Banned);
+                            await DisconnectWithReasonDetailAsync(
+                                DisconnectReason.Banned,
+                                GetPendingDisconnectDetail(DisconnectReason.Banned) ?? "Join denied: player is banned from this lobby.");
                             break;
                         case GameJoinError.GameFull:
                             await DisconnectAsync(DisconnectReason.GameFull);
@@ -308,7 +313,7 @@ namespace Impostor.Server.Net
                         out var playerId,
                         out var isBan);
 
-                    await Player!.Game.HandleKickPlayer(playerId, isBan);
+                    await Player!.Game.HandleKickPlayer(playerId, isBan, Player);
                     break;
                 }
 
@@ -359,6 +364,13 @@ namespace Impostor.Server.Net
 
         public override async ValueTask HandleDisconnectAsync(string reason)
         {
+            var disconnectContext = ConsumePendingDisconnectContext();
+            var expectedReason = disconnectContext.Reason?.ToString();
+            var detail = expectedReason == reason ? disconnectContext.Detail : null;
+            var customReason = expectedReason == reason && disconnectContext.Reason == DisconnectReason.Custom
+                ? disconnectContext.CustomMessage
+                : null;
+
             try
             {
                 if (Player != null)
@@ -373,7 +385,23 @@ namespace Impostor.Server.Net
                 _logger.LogError(ex, "Exception caught in client disconnection.");
             }
 
-            _logger.LogInformation("Client {0} disconnecting, reason: {1}", Id, reason);
+            if (!string.IsNullOrWhiteSpace(detail) && !string.IsNullOrWhiteSpace(customReason))
+            {
+                _logger.LogInformation("Client {0} disconnecting, reason: {1}, detail: {2}, custom reason: {3}", Id, reason, detail, customReason);
+            }
+            else if (!string.IsNullOrWhiteSpace(detail))
+            {
+                _logger.LogInformation("Client {0} disconnecting, reason: {1}, detail: {2}", Id, reason, detail);
+            }
+            else if (!string.IsNullOrWhiteSpace(customReason))
+            {
+                _logger.LogInformation("Client {0} disconnecting, reason: {1}, custom reason: {2}", Id, reason, customReason);
+            }
+            else
+            {
+                _logger.LogInformation("Client {0} disconnecting, reason: {1}", Id, reason);
+            }
+
             _clientManager.Remove(this);
             await _gameManager.OnClientDisconnectAsync(this);
         }

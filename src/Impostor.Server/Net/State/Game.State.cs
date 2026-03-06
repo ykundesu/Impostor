@@ -29,7 +29,7 @@ namespace Impostor.Server.Net.State
             await _eventManager.CallAsync(new GamePlayerJoinedEvent(this, player));
         }
 
-        private async ValueTask<bool> PlayerRemove(int playerId, bool isBan = false)
+        private async ValueTask<bool> PlayerRemove(int playerId, bool isBan = false, string? disconnectDetail = null)
         {
             if (!_players.TryRemove(playerId, out var player))
             {
@@ -68,7 +68,7 @@ namespace Impostor.Server.Net.State
 
             if (isBan)
             {
-                BanIp(player.Client.Connection.EndPoint.Address);
+                BanIp(player.Client.Connection.EndPoint.Address, disconnectDetail ?? "Banned from this lobby.");
             }
 
             await _eventManager.CallAsync(new GamePlayerLeftEvent(this, player, isBan));
@@ -81,7 +81,9 @@ namespace Impostor.Server.Net.State
                 if (player.Client.Connection.IsConnected && player.Client.Connection is HazelConnection hazel)
                 {
                     _logger.LogInformation("{0} - Player {1} ({2}) kept connection open after leaving, disposing.", Code, player.Client.Name, playerId);
-                    await player.Client.DisconnectAsync(isBan ? DisconnectReason.Banned : DisconnectReason.Kicked);
+                    await player.Client.DisconnectWithReasonDetailAsync(
+                        isBan ? DisconnectReason.Banned : DisconnectReason.Kicked,
+                        disconnectDetail ?? (isBan ? "Banned from this lobby." : "Removed from this lobby."));
                 }
             });
 

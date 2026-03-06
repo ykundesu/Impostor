@@ -24,12 +24,14 @@ namespace Impostor.Server.Net.State
 {
     internal partial class Game
     {
+        private static readonly TimeSpan VoteBanDisconnectDetailWindow = TimeSpan.FromSeconds(15);
         private readonly ILogger<Game> _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly GameManager _gameManager;
         private readonly ClientManager _clientManager;
         private readonly ConcurrentDictionary<int, ClientPlayer> _players;
-        private readonly HashSet<IPAddress> _bannedIps;
+        private readonly ConcurrentDictionary<IPAddress, string?> _bannedIps;
+        private readonly ConcurrentDictionary<int, DateTimeOffset> _recentVoteBanTargets;
         private readonly IEventManager _eventManager;
         private readonly ICompatibilityManager _compatibilityManager;
         private readonly CompatibilityConfig _compatibilityConfig;
@@ -53,7 +55,8 @@ namespace Impostor.Server.Net.State
             _serviceProvider = serviceProvider;
             _gameManager = gameManager;
             _players = new ConcurrentDictionary<int, ClientPlayer>();
-            _bannedIps = new HashSet<IPAddress>();
+            _bannedIps = new ConcurrentDictionary<IPAddress, string?>();
+            _recentVoteBanTargets = new ConcurrentDictionary<int, DateTimeOffset>();
 
             PublicIp = publicIp;
             Code = code;
@@ -158,6 +161,49 @@ namespace Impostor.Server.Net.State
                 .Where(filter)
                 .Select(p => p.Client.Connection)
                 .Where(c => c != null && c.IsConnected)!;
+        }
+
+        internal void RegisterVoteBanActivity(int targetClientId)
+        {
+            _recentVoteBanTargets[targetClientId] = DateTimeOffset.UtcNow;
+        }
+
+        private bool TryConsumeRecentVoteBanActivity(int targetClientId)
+        {
+            if (_recentVoteBanTargets.TryGetValue(targetClientId, out var timestamp) &&
+                DateTimeOffset.UtcNow - timestamp <= VoteBanDisconnectDetailWindow)
+            {
+                _recentVoteBanTargets.TryRemove(targetClientId, out _);
+                return true;
+            }
+
+            _recentVoteBanTargets.TryRemove(targetClientId, out _);
+            return false;
+        }
+
+        private string BuildRemovalDisconnectDetail(int playerId, bool isBan, ClientPlayer? source)
+        {
+            if (isBan)
+            {
+                if (source == null)
+                {
+                    return "Ban requested by server/plugin API.";
+                }
+
+                if (TryConsumeRecentVoteBanActivity(playerId))
+                {
+                    return $"VoteBan: host {source.Client.Name} ({source.Client.Id}) sent a ban after recent AddVote activity.";
+                }
+
+                return $"Ban requested by host {source.Client.Name} ({source.Client.Id}) via KickPlayer packet.";
+            }
+
+            if (source == null)
+            {
+                return "Kick requested by server/plugin API.";
+            }
+
+            return $"Kick requested by host {source.Client.Name} ({source.Client.Id}) via KickPlayer packet.";
         }
     }
 }

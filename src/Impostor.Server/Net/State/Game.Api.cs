@@ -22,7 +22,17 @@ namespace Impostor.Server.Net.State
 
         public void BanIp(IPAddress ipAddress)
         {
-            _bannedIps.Add(ipAddress);
+            BanIp(ipAddress, "Banned from this lobby.");
+        }
+
+        internal void BanIp(IPAddress ipAddress, string? detail)
+        {
+            _bannedIps[ipAddress] = detail;
+        }
+
+        internal bool TryGetBanDetail(IPAddress ipAddress, out string? detail)
+        {
+            return _bannedIps.TryGetValue(ipAddress, out detail);
         }
 
         public async ValueTask SyncSettingsAsync()

@@ -67,6 +67,7 @@ namespace Impostor.Server.Net.Inner.Objects.Components
             if (call == RpcCalls.AddVote)
             {
                 Rpc26AddVote.Deserialize(reader, out var clientId, out var targetClientId);
+                Game.RegisterVoteBanActivity(targetClientId);
 
                 var actualSender = GetPlayerIdentity(sender.Client.Id);
                 var claimedVoter = GetPlayerIdentity(clientId);
