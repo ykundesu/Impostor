@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Impostor.Api;
+using Impostor.Api.Config;
 using Impostor.Api.Net;
 using Impostor.Api.Net.Custom;
 using Impostor.Api.Net.Inner;
@@ -10,6 +11,7 @@ using Impostor.Api.Net.Messages.Rpcs;
 using Impostor.Server.Http;
 using Impostor.Server.Net.State;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Impostor.Server.Net.Inner.Objects.Components
 {
@@ -17,11 +19,17 @@ namespace Impostor.Server.Net.Inner.Objects.Components
     {
         private readonly ILogger<InnerVoteBanSystem> _logger;
         private readonly Dictionary<int, int[]> _votes;
+        private readonly ServerConfig _serverConfig;
 
-        public InnerVoteBanSystem(ICustomMessageManager<ICustomRpc> customMessageManager, Game game, ILogger<InnerVoteBanSystem> logger) : base(customMessageManager, game)
+        public InnerVoteBanSystem(
+            ICustomMessageManager<ICustomRpc> customMessageManager,
+            Game game,
+            ILogger<InnerVoteBanSystem> logger,
+            IOptions<ServerConfig> serverOptions) : base(customMessageManager, game)
         {
             _logger = logger;
             _votes = new Dictionary<int, int[]>();
+            _serverConfig = serverOptions.Value;
             Components.Add(this);
         }
 
@@ -68,6 +76,16 @@ namespace Impostor.Server.Net.Inner.Objects.Components
             if (call == RpcCalls.AddVote)
             {
                 Rpc26AddVote.Deserialize(reader, out var clientId, out var targetClientId);
+
+                if (!_serverConfig.EnableVoteKick)
+                {
+                    _logger.LogInformation(
+                        "VoteBan AddVote blocked: voterId={VoterId} targetId={TargetId}",
+                        clientId,
+                        targetClientId);
+                    return false;
+                }
+
                 Game.RegisterVoteBanActivity(targetClientId);
 
                 var actualSender = GetPlayerIdentity(sender.Client.Id);
