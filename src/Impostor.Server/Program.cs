@@ -11,6 +11,7 @@ using Impostor.Api.Games.Managers;
 using Impostor.Api.Net.Custom;
 using Impostor.Api.Net.Manager;
 using Impostor.Api.Plugins;
+using Impostor.Api.Statistics;
 using Impostor.Api.Utils;
 using Impostor.Hazel.Extensions;
 using Impostor.Server.Events;
@@ -22,6 +23,7 @@ using Impostor.Server.Net.Manager;
 using Impostor.Server.Net.Messages;
 using Impostor.Server.Plugins;
 using Impostor.Server.Recorder;
+using Impostor.Server.Statistics;
 using Impostor.Server.Utils;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -137,6 +139,8 @@ namespace Impostor.Server
                     services.AddSingleton<IGameManager>(p => p.GetRequiredService<GameManager>());
                     services.AddSingleton<ListingManager>();
                     services.AddSingleton<MatchmakingTokenTracker>();
+                    services.AddSingleton<RpcTelemetryProvider>();
+                    services.AddSingleton<IRpcTelemetryProvider>(p => p.GetRequiredService<RpcTelemetryProvider>());
 
                     services.AddEventPools();
                     services.AddHazel();

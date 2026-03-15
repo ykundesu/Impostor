@@ -124,9 +124,12 @@ namespace Impostor.Server.Net.State
                     case GameDataTag.RpcFlag:
                     {
                         var netId = reader.ReadPackedUInt32();
+                        var rpcId = reader.ReadByte();
+                        _rpcTelemetryProvider.RecordReceived(Code, rpcId);
+
                         if (_allObjectsFast.TryGetValue(netId, out var obj))
                         {
-                            if (!await obj.HandleRpcAsync(sender, target, (RpcCalls)reader.ReadByte(), reader))
+                            if (!await obj.HandleRpcAsync(sender, target, (RpcCalls)rpcId, reader))
                             {
                                 parent.RemoveMessage(reader);
                                 continue;

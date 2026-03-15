@@ -17,6 +17,7 @@ using Impostor.Api.Net.Manager;
 using Impostor.Api.Net.Messages.S2C;
 using Impostor.Server.Events;
 using Impostor.Server.Net.Manager;
+using Impostor.Server.Statistics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -36,6 +37,7 @@ namespace Impostor.Server.Net.State
         private readonly ICompatibilityManager _compatibilityManager;
         private readonly CompatibilityConfig _compatibilityConfig;
         private readonly TimeoutConfig _timeoutConfig;
+        private readonly RpcTelemetryProvider _rpcTelemetryProvider;
 
         public Game(
             ILogger<Game> logger,
@@ -48,6 +50,7 @@ namespace Impostor.Server.Net.State
             ClientManager clientManager,
             IEventManager eventManager,
             ICompatibilityManager compatibilityManager,
+            RpcTelemetryProvider rpcTelemetryProvider,
             IOptions<CompatibilityConfig> compatibilityConfig,
             IOptions<TimeoutConfig> timeoutConfig)
         {
@@ -68,6 +71,7 @@ namespace Impostor.Server.Net.State
             _clientManager = clientManager;
             _eventManager = eventManager;
             _compatibilityManager = compatibilityManager;
+            _rpcTelemetryProvider = rpcTelemetryProvider;
             _compatibilityConfig = compatibilityConfig.Value;
             _timeoutConfig = timeoutConfig.Value;
             Items = new ConcurrentDictionary<object, object>();
