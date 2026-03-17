@@ -9,6 +9,7 @@ using Impostor.Hazel.Udp;
 using Impostor.Server.Events.Client;
 using Impostor.Server.Net.Hazel;
 using Impostor.Server.Net.Manager;
+using Impostor.Server.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.ObjectPool;
 
@@ -20,18 +21,21 @@ namespace Impostor.Server.Net
         private readonly ClientManager _clientManager;
         private readonly ObjectPool<MessageReader> _readerPool;
         private readonly ILogger<HazelConnection> _connectionLogger;
+        private readonly OriginalEndpointTracker _originalEndpointTracker;
         private UdpConnectionListener? _connection;
 
         public Matchmaker(
             IEventManager eventManager,
             ClientManager clientManager,
             ObjectPool<MessageReader> readerPool,
-            ILogger<HazelConnection> connectionLogger)
+            ILogger<HazelConnection> connectionLogger,
+            OriginalEndpointTracker originalEndpointTracker)
         {
             _eventManager = eventManager;
             _clientManager = clientManager;
             _readerPool = readerPool;
             _connectionLogger = connectionLogger;
+            _originalEndpointTracker = originalEndpointTracker;
         }
 
         public async ValueTask StartAsync(IPEndPoint ipEndPoint)
@@ -64,7 +68,8 @@ namespace Impostor.Server.Net
             // Handshake.
             HandshakeC2S.Deserialize(e.HandshakeData, out var clientVersion, out var name, out var language, out var chatMode, out var platformSpecificData);
 
-            var connection = new HazelConnection(e.Connection, _connectionLogger);
+            _originalEndpointTracker.TryResolve(e.Connection.EndPoint, out var originalEndPoint);
+            var connection = new HazelConnection(e.Connection, _connectionLogger, originalEndPoint);
 
             await _eventManager.CallAsync(new ClientConnectionEvent(connection, e.HandshakeData));
 

@@ -68,7 +68,7 @@ namespace Impostor.Server.Net.State
 
             if (isBan)
             {
-                BanIp(player.Client.Connection.EndPoint.Address, disconnectDetail ?? "Banned from this lobby.");
+                BanIp(player.Client.Connection.GetEffectiveEndPoint().Address, disconnectDetail ?? "Banned from this lobby.");
             }
 
             await _eventManager.CallAsync(new GamePlayerLeftEvent(this, player, isBan));

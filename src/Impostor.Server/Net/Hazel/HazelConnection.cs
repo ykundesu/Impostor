@@ -10,10 +10,11 @@ namespace Impostor.Server.Net.Hazel
     {
         private readonly ILogger<HazelConnection> _logger;
 
-        public HazelConnection(Connection innerConnection, ILogger<HazelConnection> logger)
+        public HazelConnection(Connection innerConnection, ILogger<HazelConnection> logger, IPEndPoint? originalEndPoint = null)
         {
             _logger = logger;
             InnerConnection = innerConnection;
+            OriginalEndPoint = originalEndPoint;
             innerConnection.DataReceived = ConnectionOnDataReceived;
             innerConnection.Disconnected = ConnectionOnDisconnected;
         }
@@ -21,6 +22,8 @@ namespace Impostor.Server.Net.Hazel
         public Connection InnerConnection { get; }
 
         public IPEndPoint EndPoint => InnerConnection.EndPoint;
+
+        public IPEndPoint? OriginalEndPoint { get; }
 
         public bool IsConnected => InnerConnection.State == ConnectionState.Connected;
 

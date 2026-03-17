@@ -92,7 +92,7 @@ namespace Impostor.Server.Net
             {
                 if (_antiCheatConfig.BanIpFromGame)
                 {
-                    player.Game.BanIp(Connection.EndPoint.Address);
+                    player.Game.BanIp(Connection.GetEffectiveEndPoint().Address);
                 }
 
                 await player.Game.HandleRemovePlayer(Id, DisconnectReason.Hacking);

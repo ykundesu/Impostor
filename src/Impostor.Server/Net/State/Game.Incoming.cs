@@ -153,7 +153,7 @@ namespace Impostor.Server.Net.State
         private async ValueTask<GameJoinResult> AddClientSafeAsync(ClientBase client)
         {
             // Check if the IP of the player is banned.
-            if (TryGetBanDetail(client.Connection.EndPoint.Address, out var banDetail))
+            if (TryGetBanDetail(client.Connection.GetEffectiveEndPoint().Address, out var banDetail))
             {
                 client.SetPendingDisconnectDetail(DisconnectReason.Banned, banDetail ?? "Join denied: player is banned from this lobby.");
                 return GameJoinResult.FromError(GameJoinError.Banned);

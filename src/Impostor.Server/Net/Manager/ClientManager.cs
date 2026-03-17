@@ -137,7 +137,8 @@ namespace Impostor.Server.Net.Manager
             _logger.LogTrace("Client connected.");
             _clients.TryAdd(id, client);
 
-            if (_matchmakingTokenTracker.TryMatch(connection.EndPoint.Address, name, clientVersion, out var tokenRecord))
+            var effectiveEndPoint = connection.GetEffectiveEndPoint();
+            if (_matchmakingTokenTracker.TryMatch(effectiveEndPoint.Address, name, clientVersion, out var tokenRecord))
             {
                 var matchedTokenRecord = tokenRecord!;
                 client.Items[MatchmakingTokenTracker.ClientItemKey] = matchedTokenRecord;
@@ -146,7 +147,7 @@ namespace Impostor.Server.Net.Manager
                     name,
                     id,
                     matchedTokenRecord.ProductUserId,
-                    connection.EndPoint.Address,
+                    effectiveEndPoint.Address,
                     matchedTokenRecord.IssuedAt);
             }
 

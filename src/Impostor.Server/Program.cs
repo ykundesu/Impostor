@@ -111,6 +111,7 @@ namespace Impostor.Server
                     services.Configure<ServerConfig>(host.Configuration.GetSection(ServerConfig.Section));
                     services.Configure<TimeoutConfig>(host.Configuration.GetSection(TimeoutConfig.Section));
                     services.Configure<HttpServerConfig>(host.Configuration.GetSection(HttpServerConfig.Section));
+                    services.Configure<OriginalEndpointConfig>(host.Configuration.GetSection(OriginalEndpointConfig.Section));
 
                     services.AddSingleton<ICompatibilityManager, CompatibilityManager>();
                     services.AddSingleton<ClientManager>();
@@ -139,6 +140,7 @@ namespace Impostor.Server
                     services.AddSingleton<IGameManager>(p => p.GetRequiredService<GameManager>());
                     services.AddSingleton<ListingManager>();
                     services.AddSingleton<MatchmakingTokenTracker>();
+                    services.AddSingleton<OriginalEndpointTracker>();
                     services.AddSingleton<RpcTelemetryProvider>();
                     services.AddSingleton<IRpcTelemetryProvider>(p => p.GetRequiredService<RpcTelemetryProvider>());
 
