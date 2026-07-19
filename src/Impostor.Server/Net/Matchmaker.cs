@@ -21,6 +21,7 @@ namespace Impostor.Server.Net
         private readonly ClientManager _clientManager;
         private readonly ObjectPool<MessageReader> _readerPool;
         private readonly ILogger<HazelConnection> _connectionLogger;
+        private readonly ILogger<ResilientUdpConnectionListener> _listenerLogger;
         private readonly OriginalEndpointTracker _originalEndpointTracker;
         private UdpConnectionListener? _connection;
 
@@ -29,12 +30,14 @@ namespace Impostor.Server.Net
             ClientManager clientManager,
             ObjectPool<MessageReader> readerPool,
             ILogger<HazelConnection> connectionLogger,
+            ILogger<ResilientUdpConnectionListener> listenerLogger,
             OriginalEndpointTracker originalEndpointTracker)
         {
             _eventManager = eventManager;
             _clientManager = clientManager;
             _readerPool = readerPool;
             _connectionLogger = connectionLogger;
+            _listenerLogger = listenerLogger;
             _originalEndpointTracker = originalEndpointTracker;
         }
 
@@ -47,7 +50,7 @@ namespace Impostor.Server.Net
                 _ => throw new InvalidOperationException(),
             };
 
-            _connection = new UdpConnectionListener(ipEndPoint, _readerPool, mode)
+            _connection = new ResilientUdpConnectionListener(ipEndPoint, _readerPool, _listenerLogger, mode)
             {
                 NewConnection = OnNewConnection,
             };
