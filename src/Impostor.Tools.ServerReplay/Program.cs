@@ -198,9 +198,19 @@ namespace Impostor.Tools.ServerReplay
 
                     message.Update(buffer, tag: tag);
 
-                    if (tag == MessageFlags.HostGame)
+                    if (tag == MessageFlags.HostGame || tag == MessageFlags.HostModdedGame)
                     {
-                        Message00HostGameC2S.Deserialize(message, out var gameOptions, out _, out _);
+                        IGameOptions gameOptions;
+
+                        if (tag == MessageFlags.HostModdedGame)
+                        {
+                            Message25HostModdedGameC2S.Deserialize(message, out gameOptions, out _, out _, out _);
+                        }
+                        else
+                        {
+                            Message00HostGameC2S.Deserialize(message, out gameOptions, out _, out _);
+                        }
+
                         GameOptions.Add(clientId, gameOptions);
                     }
                     else if (Connections.TryGetValue(clientId, out var client))

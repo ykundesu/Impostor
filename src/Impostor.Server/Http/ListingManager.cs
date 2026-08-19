@@ -114,7 +114,7 @@ public sealed class ListingManager
         var result = new List<IGame>();
         var resultCount = 0;
 
-        // Not sure what is this. Used for Reacotr.Impostor?
+        // Apply custom filters from API
         var filters = _listingFilters.Select(f => f.GetFilter(ctx)).ToArray();
 
         foreach (var game in _gameManager.Games)
@@ -148,6 +148,13 @@ public sealed class ListingManager
                     {
                         case "map":
                             if (filter.SubFilter is MapGameFilter mapFilter && ((1 << (int)game.Options.Map) & mapFilter.AcceptedValues) == 0)
+                            {
+                                matchesAllFilters = false;
+                            }
+
+                            break;
+                        case "languages":
+                            if (filter.SubFilter is LanguageFilter langFilter && game.Options.Keywords != (GameKeywords)langFilter.AcceptedValues)
                             {
                                 matchesAllFilters = false;
                             }

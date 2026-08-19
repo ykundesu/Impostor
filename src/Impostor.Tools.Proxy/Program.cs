@@ -34,6 +34,8 @@ namespace Impostor.Tools.Proxy
             { 13, "Redirect" },
             { 14, "ReselectServer" },
             { 16, "GetGameListV2" },
+            { 25, "HostModdedGame" },
+            { 26, "PackedGameDataTo" },
         };
 
         private static IServiceProvider _serviceProvider;
