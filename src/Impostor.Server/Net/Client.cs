@@ -5,6 +5,7 @@ using Impostor.Api;
 using Impostor.Api.Config;
 using Impostor.Api.Games;
 using Impostor.Api.Innersloth;
+using Impostor.Api.Innersloth.GameOptions;
 using Impostor.Api.Net;
 using Impostor.Api.Net.Custom;
 using Impostor.Api.Net.Messages;
@@ -128,9 +129,20 @@ namespace Impostor.Server.Net
             switch (flag)
             {
                 case MessageFlags.HostGame:
+                case MessageFlags.HostModdedGame:
                 {
                     // Read game settings.
-                    Message00HostGameC2S.Deserialize(reader, out var gameOptions, out _, out var gameFilterOptions);
+                    IGameOptions gameOptions;
+                    GameFilterOptions gameFilterOptions;
+
+                    if (flag == MessageFlags.HostModdedGame)
+                    {
+                        Message25HostModdedGameC2S.Deserialize(reader, out gameOptions, out _, out gameFilterOptions, out _);
+                    }
+                    else
+                    {
+                        Message00HostGameC2S.Deserialize(reader, out gameOptions, out _, out gameFilterOptions);
+                    }
 
                     // Create game.
                     var game = await _gameManager.CreateAsync(this, gameOptions, gameFilterOptions);
