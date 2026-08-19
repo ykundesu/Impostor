@@ -14,6 +14,11 @@ namespace Impostor.Api.Net
         IPEndPoint EndPoint { get; }
 
         /// <summary>
+        ///     Gets the original IP endpoint of the client when a trusted relay provided it.
+        /// </summary>
+        IPEndPoint? OriginalEndPoint { get; }
+
+        /// <summary>
         ///     Gets a value indicating whether the client is connected to the server.
         /// </summary>
         bool IsConnected { get; }

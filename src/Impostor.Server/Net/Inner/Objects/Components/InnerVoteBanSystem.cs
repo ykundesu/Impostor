@@ -2,13 +2,16 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Impostor.Api;
+using Impostor.Api.Config;
 using Impostor.Api.Net;
 using Impostor.Api.Net.Custom;
 using Impostor.Api.Net.Inner;
 using Impostor.Api.Net.Inner.Objects;
 using Impostor.Api.Net.Messages.Rpcs;
+using Impostor.Server.Http;
 using Impostor.Server.Net.State;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Impostor.Server.Net.Inner.Objects.Components
 {
@@ -16,11 +19,17 @@ namespace Impostor.Server.Net.Inner.Objects.Components
     {
         private readonly ILogger<InnerVoteBanSystem> _logger;
         private readonly Dictionary<int, int[]> _votes;
+        private readonly ServerConfig _serverConfig;
 
-        public InnerVoteBanSystem(ICustomMessageManager<ICustomRpc> customMessageManager, Game game, ILogger<InnerVoteBanSystem> logger) : base(customMessageManager, game)
+        public InnerVoteBanSystem(
+            ICustomMessageManager<ICustomRpc> customMessageManager,
+            Game game,
+            ILogger<InnerVoteBanSystem> logger,
+            IOptions<ServerConfig> serverOptions) : base(customMessageManager, game)
         {
             _logger = logger;
             _votes = new Dictionary<int, int[]>();
+            _serverConfig = serverOptions.Value;
             Components.Add(this);
         }
 
@@ -68,18 +77,98 @@ namespace Impostor.Server.Net.Inner.Objects.Components
             {
                 Rpc26AddVote.Deserialize(reader, out var clientId, out var targetClientId);
 
+                if (!_serverConfig.EnableVoteKick)
+                {
+                    _logger.LogInformation(
+                        "VoteBan AddVote blocked: voterId={VoterId} targetId={TargetId}",
+                        clientId,
+                        targetClientId);
+                    return false;
+                }
+
+                Game.RegisterVoteBanActivity(targetClientId);
+
+                var actualSender = GetPlayerIdentity(sender.Client.Id);
+                var claimedVoter = GetPlayerIdentity(clientId);
+                var voteTarget = GetPlayerIdentity(targetClientId);
+
                 if (clientId != sender.Client.Id)
                 {
-                    if (await sender.Client.ReportCheatAsync(RpcCalls.AddVote, CheatCategory.Ownership, $"Client sent {nameof(RpcCalls.AddVote)} as other client"))
+                    _logger.LogWarning(
+                        "VoteBan AddVote spoof: actualSenderId={ActualSenderId} actualSenderName={ActualSenderName} actualSenderFriendCode={ActualSenderFriendCode} actualSenderPuid={ActualSenderPuid} claimedVoterId={ClaimedVoterId} claimedVoterName={ClaimedVoterName} claimedVoterFriendCode={ClaimedVoterFriendCode} claimedVoterPuid={ClaimedVoterPuid} targetId={TargetId} targetName={TargetName} targetFriendCode={TargetFriendCode} targetPuid={TargetPuid}",
+                        actualSender.ClientId,
+                        actualSender.Name,
+                        actualSender.FriendCode,
+                        actualSender.ProductUserId,
+                        claimedVoter.ClientId,
+                        claimedVoter.Name,
+                        claimedVoter.FriendCode,
+                        claimedVoter.ProductUserId,
+                        voteTarget.ClientId,
+                        voteTarget.Name,
+                        voteTarget.FriendCode,
+                        voteTarget.ProductUserId);
+
+                    if (await sender.Client.ReportCheatAsync(RpcCalls.AddVote, CheatCategory.VoteBanOwnership, $"Client sent {nameof(RpcCalls.AddVote)} as other client"))
                     {
                         return false;
                     }
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "VoteBan AddVote: voterId={VoterId} voterName={VoterName} voterFriendCode={VoterFriendCode} voterPuid={VoterPuid} targetId={TargetId} targetName={TargetName} targetFriendCode={TargetFriendCode} targetPuid={TargetPuid}",
+                        claimedVoter.ClientId,
+                        claimedVoter.Name,
+                        claimedVoter.FriendCode,
+                        claimedVoter.ProductUserId,
+                        voteTarget.ClientId,
+                        voteTarget.Name,
+                        voteTarget.FriendCode,
+                        voteTarget.ProductUserId);
                 }
 
                 return true;
             }
 
             return await base.HandleRpcAsync(sender, target, call, reader);
+        }
+
+        private (int ClientId, string Name, string FriendCode, string ProductUserId) GetPlayerIdentity(int clientId)
+        {
+            if (!Game.TryGetPlayer(clientId, out var player))
+            {
+                return (clientId, "<unknown>", "<unknown>", "<unknown>");
+            }
+
+            var playerInfo = player.Character?.PlayerInfo;
+            var name = string.IsNullOrWhiteSpace(playerInfo?.PlayerName) ? player.Client.Name : playerInfo.PlayerName;
+            var friendCode = string.IsNullOrWhiteSpace(playerInfo?.FriendCode) ? "<unknown>" : playerInfo.FriendCode;
+            var productUserId = GetTrackedProductUserId(player, playerInfo);
+
+            return (player.Client.Id, name, friendCode, productUserId);
+        }
+
+        private static string GetTrackedProductUserId(IClientPlayer player, IInnerPlayerInfo? playerInfo)
+        {
+            var reportedProductUserId = string.IsNullOrWhiteSpace(playerInfo?.ProductUserId) ? null : playerInfo.ProductUserId;
+
+            if (!MatchmakingTokenTracker.TryGetMatchedToken(player.Client, out var tokenRecord))
+            {
+                return reportedProductUserId ?? "<unknown>";
+            }
+
+            if (string.IsNullOrWhiteSpace(reportedProductUserId))
+            {
+                return tokenRecord!.ProductUserId;
+            }
+
+            if (!string.Equals(reportedProductUserId, tokenRecord!.ProductUserId, StringComparison.Ordinal))
+            {
+                return $"{reportedProductUserId} [token:{tokenRecord.ProductUserId}]";
+            }
+
+            return reportedProductUserId;
         }
     }
 }

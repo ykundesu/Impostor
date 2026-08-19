@@ -1,0 +1,24 @@
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+
+WORKDIR /source
+
+COPY src/Directory.Build.props ./src/Directory.Build.props
+COPY src/Impostor.Tools.OriginalEndpointRelay/Impostor.Tools.OriginalEndpointRelay.csproj ./src/Impostor.Tools.OriginalEndpointRelay/
+
+RUN dotnet restore ./src/Impostor.Tools.OriginalEndpointRelay/Impostor.Tools.OriginalEndpointRelay.csproj
+
+COPY src/Impostor.Tools.OriginalEndpointRelay/. ./src/Impostor.Tools.OriginalEndpointRelay/
+
+RUN dotnet publish \
+    -c Release \
+    -o /app \
+    --no-restore \
+    ./src/Impostor.Tools.OriginalEndpointRelay/Impostor.Tools.OriginalEndpointRelay.csproj
+
+FROM --platform=$TARGETPLATFORM mcr.microsoft.com/dotnet/runtime:8.0
+
+WORKDIR /app
+COPY --from=build /app ./
+
+EXPOSE 22023/udp
+ENTRYPOINT ["dotnet", "Impostor.Tools.OriginalEndpointRelay.dll"]

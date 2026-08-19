@@ -14,11 +14,16 @@ namespace Impostor.Server.Net.Hazel
         private readonly ILogger<HazelConnection> _logger;
         private readonly AntiCheatConfig _antiCheatConfig;
 
-        public HazelConnection(Connection innerConnection, ILogger<HazelConnection> logger, IOptions<AntiCheatConfig> antiCheatOptions)
+        public HazelConnection(
+            Connection innerConnection,
+            ILogger<HazelConnection> logger,
+            IOptions<AntiCheatConfig> antiCheatOptions,
+            IPEndPoint? originalEndPoint = null)
         {
             _logger = logger;
             _antiCheatConfig = antiCheatOptions.Value;
             InnerConnection = innerConnection;
+            OriginalEndPoint = originalEndPoint;
             innerConnection.DataReceived = ConnectionOnDataReceived;
             innerConnection.Disconnected = ConnectionOnDisconnected;
         }
@@ -26,6 +31,8 @@ namespace Impostor.Server.Net.Hazel
         public Connection InnerConnection { get; }
 
         public IPEndPoint EndPoint => InnerConnection.EndPoint;
+
+        public IPEndPoint? OriginalEndPoint { get; }
 
         public bool IsConnected => InnerConnection.State == ConnectionState.Connected;
 

@@ -11,6 +11,7 @@ using Impostor.Api.Games.Managers;
 using Impostor.Api.Net.Custom;
 using Impostor.Api.Net.Manager;
 using Impostor.Api.Plugins;
+using Impostor.Api.Statistics;
 using Impostor.Api.Utils;
 using Impostor.Hazel.Extensions;
 using Impostor.Server.Events;
@@ -22,6 +23,7 @@ using Impostor.Server.Net.Manager;
 using Impostor.Server.Net.Messages;
 using Impostor.Server.Plugins;
 using Impostor.Server.Recorder;
+using Impostor.Server.Statistics;
 using Impostor.Server.Utils;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -32,6 +34,7 @@ using Microsoft.Extensions.ObjectPool;
 using Serilog;
 using Serilog.Events;
 using Serilog.Settings.Configuration;
+using Microsoft.AspNetCore.Cors;
 
 namespace Impostor.Server
 {
@@ -108,6 +111,7 @@ namespace Impostor.Server
                     services.Configure<ServerConfig>(host.Configuration.GetSection(ServerConfig.Section));
                     services.Configure<TimeoutConfig>(host.Configuration.GetSection(TimeoutConfig.Section));
                     services.Configure<HttpServerConfig>(host.Configuration.GetSection(HttpServerConfig.Section));
+                    services.Configure<OriginalEndpointConfig>(host.Configuration.GetSection(OriginalEndpointConfig.Section));
 
                     services.AddSingleton<ICompatibilityManager, CompatibilityManager>();
                     services.AddSingleton<ClientManager>();
@@ -135,6 +139,10 @@ namespace Impostor.Server
                     services.AddSingleton<GameManager>();
                     services.AddSingleton<IGameManager>(p => p.GetRequiredService<GameManager>());
                     services.AddSingleton<ListingManager>();
+                    services.AddSingleton<MatchmakingTokenTracker>();
+                    services.AddSingleton<OriginalEndpointTracker>();
+                    services.AddSingleton<RpcTelemetryProvider>();
+                    services.AddSingleton<IRpcTelemetryProvider>(p => p.GetRequiredService<RpcTelemetryProvider>());
 
                     services.AddEventPools();
                     services.AddHazel();
@@ -145,6 +153,18 @@ namespace Impostor.Server
                     services.AddSingleton<IEventManager, EventManager>();
                     services.AddSingleton<Matchmaker>();
                     services.AddHostedService<MatchmakerService>();
+
+                    // Add CORS services
+                    services.AddCors(options =>
+                    {
+                        options.AddPolicy("AllowAll",
+                            builder =>
+                            {
+                                builder.AllowAnyOrigin()
+                                       .AllowAnyHeader()
+                                       .AllowAnyMethod();
+                            });
+                    });
                 })
                 .UseSerilog((context, loggerConfiguration) =>
                 {
@@ -220,6 +240,9 @@ namespace Impostor.Server
                         }
 
                         app.UseRouting();
+
+                        // Use CORS middleware
+                        app.UseCors("AllowAll");
 
                         app.UseEndpoints(endpoints =>
                         {

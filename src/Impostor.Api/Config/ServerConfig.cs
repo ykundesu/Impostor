@@ -17,6 +17,8 @@ namespace Impostor.Api.Config
 
         public ushort ListenPort { get; set; } = 22023;
 
+        public bool EnableVoteKick { get; set; } = true;
+
         public string ResolvePublicIp()
         {
             return _resolvedPublicIp ??= IpUtils.ResolveIp(PublicIp);

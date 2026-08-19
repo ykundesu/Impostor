@@ -15,6 +15,7 @@ using Impostor.Api.Net;
 using Impostor.Api.Net.Manager;
 using Impostor.Server.Events;
 using Impostor.Server.Net.State;
+using Impostor.Server.Statistics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -32,6 +33,7 @@ namespace Impostor.Server.Net.Manager
         private readonly IGameCodeFactory _gameCodeFactory;
         private readonly ICompatibilityManager _compatibilityManager;
         private readonly ConcurrentDictionary<IClient, Game?> _gamesCreatedBy;
+        private readonly RpcTelemetryProvider _rpcTelemetryProvider;
 
         public GameManager(
             ILogger<GameManager> logger,
@@ -40,7 +42,8 @@ namespace Impostor.Server.Net.Manager
             IEventManager eventManager,
             IGameCodeFactory gameCodeFactory,
             IOptions<CompatibilityConfig> compatibilityConfig,
-            ICompatibilityManager compatibilityManager)
+            ICompatibilityManager compatibilityManager,
+            RpcTelemetryProvider rpcTelemetryProvider)
         {
             _logger = logger;
             _serviceProvider = serviceProvider;
@@ -51,6 +54,7 @@ namespace Impostor.Server.Net.Manager
             _compatibilityConfig = compatibilityConfig.Value;
             _compatibilityManager = compatibilityManager;
             _gamesCreatedBy = new ConcurrentDictionary<IClient, Game?>();
+            _rpcTelemetryProvider = rpcTelemetryProvider;
         }
 
         IEnumerable<IGame> IGameManager.Games => _games.Select(kv => kv.Value);
@@ -81,6 +85,7 @@ namespace Impostor.Server.Net.Manager
             }
 
             _logger.LogDebug("Remove game with code {0} ({1}).", GameCodeParser.IntToGameName(gameCode), gameCode);
+            _rpcTelemetryProvider.RemoveRoom(gameCode);
 
             await _eventManager.CallAsync(new GameDestroyedEvent(game));
         }

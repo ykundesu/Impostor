@@ -11,6 +11,7 @@ using Impostor.Api.Net.Custom;
 using Impostor.Api.Net.Inner;
 using Impostor.Api.Net.Messages.Rpcs;
 using Impostor.Api.Utils;
+using Impostor.Server.Http;
 using Impostor.Server.Net.State;
 using Microsoft.Extensions.Logging;
 
@@ -35,6 +36,10 @@ namespace Impostor.Server.Net.Inner.Objects
         public int ClientId { get; internal set; }
 
         public string PlayerName => CurrentOutfit.PlayerName;
+
+        public string FriendCode { get; private set; } = string.Empty;
+
+        public string ProductUserId { get; private set; } = string.Empty;
 
         public Dictionary<PlayerOutfitType, PlayerOutfit> Outfits { get; } = new()
         {
@@ -135,49 +140,81 @@ namespace Impostor.Server.Net.Inner.Objects
 
         public override ValueTask DeserializeAsync(IClientPlayer sender, IClientPlayer? target, IMessageReader reader, bool initialState)
         {
+            _logger.LogInformation("DeserializeAsync");
             PlayerId = reader.ReadByte();
+            _logger.LogInformation("PlayerId: {PlayerId}", PlayerId);
             ClientId = reader.ReadPackedInt32();
+            _logger.LogInformation("ClientId: {ClientId}", ClientId);
 
             Outfits.Clear();
             var b = reader.ReadByte();
+            _logger.LogInformation("b: {b}", b);
             for (var i = 0; i < b; i++)
             {
                 var key = (PlayerOutfitType)reader.ReadByte();
+                _logger.LogInformation("key: {key}", key);
                 Outfits[key] = new PlayerOutfit();
                 Outfits[key].Deserialize(reader);
             }
+            _logger.LogInformation("Outfits: {Outfits}", Outfits);
 
             PlayerLevel = reader.ReadPackedUInt32();
+            _logger.LogInformation("PlayerLevel: {PlayerLevel}", PlayerLevel);
 
             var flag = reader.ReadByte();
+            _logger.LogInformation("flag: {flag}", flag);
             Disconnected = (flag & 1) != 0;
+            _logger.LogInformation("Disconnected: {Disconnected}", Disconnected);
             IsDead = (flag & 4) != 0;
+            _logger.LogInformation("IsDead: {IsDead}", IsDead);
 
             // Ignore the RoleType here and only trust the SetRole RPC, as
             // RoleType is not nullable in vanilla, while Impostor checks game
             // starts based on assigned roles.
             _ = (RoleTypes)reader.ReadUInt16();
-
+            _logger.LogInformation("RoleType: {RoleType}", RoleType?.ToString());
             if (reader.ReadBoolean())
             {
                 RoleWhenAlive = (RoleTypes)reader.ReadUInt16();
+                _logger.LogInformation("RoleWhenAlive: {RoleWhenAlive}", RoleWhenAlive?.ToString());
             }
-
+            _logger.LogInformation("RoleWhenAlive: {RoleWhenAlive}", RoleWhenAlive?.ToString());
             var taskCount = reader.ReadByte();
-
+            _logger.LogInformation("taskCount: {taskCount}", taskCount);
             if (Tasks.Count < taskCount)
             {
                 taskCount = (byte)Tasks.Count;
             }
-
+            _logger.LogInformation("taskCount: {taskCount}", taskCount);
             for (var i = 0; i < taskCount; i++)
             {
                 Tasks[i].Deserialize(reader);
             }
-
+            _logger.LogInformation("Tasks: {Tasks}", Tasks);
             // Impostor doesn't expose fields that aren't properly validated
-            reader.ReadString(); // FriendCode
-            reader.ReadString(); // PUID
+            FriendCode = reader.ReadString() ?? string.Empty; // FriendCode
+            ProductUserId = reader.ReadString() ?? string.Empty; // PUID
+            _logger.LogInformation("FriendCode: {FriendCode}", FriendCode);
+            _logger.LogInformation("PUID: {PUID}", ProductUserId);
+
+            if (sender.Client.Id == ClientId && MatchmakingTokenTracker.TryGetMatchedToken(sender.Client, out var tokenRecord))
+            {
+                if (string.IsNullOrWhiteSpace(ProductUserId))
+                {
+                    _logger.LogInformation(
+                        "ClientId {ClientId} reported an empty in-game PUID. Matched HTTP token PUID: {TokenPuid}",
+                        ClientId,
+                        tokenRecord!.ProductUserId);
+                }
+                else if (!string.Equals(ProductUserId, tokenRecord!.ProductUserId, StringComparison.Ordinal))
+                {
+                    _logger.LogWarning(
+                        "ClientId {ClientId} PUID mismatch. HTTP token PUID: {TokenPuid}, in-game PUID: {ReportedPuid}",
+                        ClientId,
+                        tokenRecord.ProductUserId,
+                        ProductUserId);
+                }
+            }
 
             return ValueTask.CompletedTask;
         }

@@ -132,8 +132,9 @@ public sealed class ListingManager
             var matchesAnyFilterSet = false;
             foreach (var filterSet in filtersList.FilterSets)
             {
-                // Not sure how to handle normal fools and seek fools
-                if (game.Options.GameMode != filterSet.GameMode)
+                // April Fools uses NormalFools/SeekFools in the client's filter while hosts often stay on Normal/HideNSeek.
+                // Treat those pairs as equivalent so HTTP matchmaking is not narrowed by the seasonal toggle.
+                if (!ModesMatchForHttpListing(game.Options.GameMode, filterSet.GameMode))
                 {
                     continue;
                 }
@@ -220,14 +221,28 @@ public sealed class ListingManager
         return result;
     }
 
+    /// <summary>
+    /// Returns true if the hosted game mode matches the client's filter mode for listing purposes,
+    /// ignoring the April Fools variant (Normal vs NormalFools, HideNSeek vs SeekFools).
+    /// </summary>
+    private static bool ModesMatchForHttpListing(GameModes hosted, GameModes requested)
+    {
+        if (hosted == requested)
+        {
+            return true;
+        }
+
+        return (hosted, requested) switch
+        {
+            (GameModes.Normal, GameModes.NormalFools) or (GameModes.NormalFools, GameModes.Normal) => true,
+            (GameModes.HideNSeek, GameModes.SeekFools) or (GameModes.SeekFools, GameModes.HideNSeek) => true,
+            _ => false,
+        };
+    }
+
     private static bool IsGameDesired(IGame game, int map, int impostorCount, GameKeywords language)
     {
         if ((map & (1 << (int)game.Options.Map)) == 0)
-        {
-            return false;
-        }
-
-        if (language != game.Options.Keywords)
         {
             return false;
         }

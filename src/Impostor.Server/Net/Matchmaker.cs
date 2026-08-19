@@ -8,6 +8,7 @@ using Impostor.Api.Net.Messages.C2S;
 using Impostor.Hazel;
 using Impostor.Hazel.Udp;
 using Impostor.Server.Events.Client;
+using Impostor.Server.Http;
 using Impostor.Server.Net.Hazel;
 using Impostor.Server.Net.Manager;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,7 @@ namespace Impostor.Server.Net
         private readonly ObjectPool<MessageReader> _readerPool;
         private readonly ILogger<HazelConnection> _connectionLogger;
         private readonly IOptions<AntiCheatConfig> _antiCheatOptions;
+        private readonly OriginalEndpointTracker _originalEndpointTracker;
         private UdpConnectionListener? _connection;
 
         public Matchmaker(
@@ -30,13 +32,15 @@ namespace Impostor.Server.Net
             ClientManager clientManager,
             ObjectPool<MessageReader> readerPool,
             ILogger<HazelConnection> connectionLogger,
-            IOptions<AntiCheatConfig> antiCheatOptions)
+            IOptions<AntiCheatConfig> antiCheatOptions,
+            OriginalEndpointTracker originalEndpointTracker)
         {
             _eventManager = eventManager;
             _clientManager = clientManager;
             _readerPool = readerPool;
             _connectionLogger = connectionLogger;
             _antiCheatOptions = antiCheatOptions;
+            _originalEndpointTracker = originalEndpointTracker;
         }
 
         public async ValueTask StartAsync(IPEndPoint ipEndPoint)
@@ -69,7 +73,8 @@ namespace Impostor.Server.Net
             // Handshake.
             HandshakeC2S.Deserialize(e.HandshakeData, out var clientVersion, out var name, out var language, out var chatMode, out var platformSpecificData);
 
-            var connection = new HazelConnection(e.Connection, _connectionLogger, _antiCheatOptions);
+            _originalEndpointTracker.TryResolve(e.Connection.EndPoint, out var originalEndPoint);
+            var connection = new HazelConnection(e.Connection, _connectionLogger, _antiCheatOptions, originalEndPoint);
 
             await _eventManager.CallAsync(new ClientConnectionEvent(connection, e.HandshakeData));
 

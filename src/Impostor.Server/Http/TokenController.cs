@@ -13,6 +13,13 @@ namespace Impostor.Server.Http;
 [ApiController]
 public sealed class TokenController : ControllerBase
 {
+    private readonly MatchmakingTokenTracker _matchmakingTokenTracker;
+
+    public TokenController(MatchmakingTokenTracker matchmakingTokenTracker)
+    {
+        _matchmakingTokenTracker = matchmakingTokenTracker;
+    }
+
     /// <summary>
     /// Get an authentication token.
     /// </summary>
@@ -21,6 +28,12 @@ public sealed class TokenController : ControllerBase
     [HttpPost]
     public IActionResult GetToken([FromBody] TokenRequest request)
     {
+        var remoteIpAddress = HttpContext.Connection.RemoteIpAddress;
+        if (remoteIpAddress != null)
+        {
+            _matchmakingTokenTracker.Record(remoteIpAddress, request.ProductUserId, request.Username, request.ClientVersion);
+        }
+
         var token = new Token
         {
             Content = new TokenPayload

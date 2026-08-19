@@ -1,4 +1,5 @@
-﻿using System.Net;
+#nullable enable
+using System.Net;
 using System.Threading.Tasks;
 using Impostor.Api.Net;
 using Impostor.Hazel.Abstractions;
@@ -15,8 +16,13 @@ namespace Impostor.Tools.ServerReplay.Mocks
         }
 
         public IPEndPoint EndPoint { get; }
+
+        public IPEndPoint? OriginalEndPoint => null;
+
         public bool IsConnected { get; }
-        public IClient Client { get; set; }
+
+        public IClient? Client { get; set; }
+
         public float AveragePing => 0;
 
         public ValueTask SendAsync(IMessageWriter writer)
@@ -24,7 +30,7 @@ namespace Impostor.Tools.ServerReplay.Mocks
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask DisconnectAsync(string reason, IMessageWriter writer = null)
+        public ValueTask DisconnectAsync(string? reason, IMessageWriter? writer = null)
         {
             return ValueTask.CompletedTask;
         }

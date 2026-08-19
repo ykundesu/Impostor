@@ -106,7 +106,7 @@ public sealed class GamesController : ControllerBase
         return Ok(_hostServer);
     }
 
-    [HttpGet("{gameId}")]
+    [HttpGet("{gameId:int}")]
     public IActionResult Show([FromRoute] int gameId)
     {
         var code = new GameCode(gameId);
@@ -167,6 +167,24 @@ public sealed class GamesController : ControllerBase
         {
             return BadRequest(new MatchmakerResponse(new MatchmakerError(DisconnectReason.ServerError, "Unknown exception caught in filter" + ex)));
         }
+    }
+
+    [HttpGet("all_for_web")]
+    public IActionResult GetAllPublicGames()
+    {
+        var gameListings = _gameManager.Games
+            .Where(game => game.IsPublic)
+            .Select(GameListingAll.From).ToList();
+        var response = new
+        {
+            games = gameListings,
+            metadata = new
+            {
+                allGamesCount = _gameManager.Games.Count(),
+                matchingGamesCount = gameListings.Count,
+            },
+        };
+        return Ok(response);
     }
 
     private static uint ConvertAddressToNumber(IPAddress address)
@@ -311,6 +329,78 @@ public sealed class GamesController : ControllerBase
                 MapId = game.Options.Map,
                 Language = game.Options.Keywords,
                 Options = game.Options.ToBase64String(),
+            };
+        }
+    }
+
+    private class GameListingAll
+    {
+        [JsonPropertyName("IP")]
+        public required uint Ip { get; init; }
+
+        [JsonPropertyName("Port")]
+        public required ushort Port { get; init; }
+
+        [JsonPropertyName("GameId")]
+        public required int GameId { get; init; }
+
+        [JsonPropertyName("PlayerCount")]
+        public required int PlayerCount { get; init; }
+
+        [JsonPropertyName("HostName")]
+        public required string HostName { get; init; }
+
+        [JsonPropertyName("TrueHostName")]
+        public required string TrueHostName { get; init; }
+
+        [JsonPropertyName("HostPlatformName")]
+        public required string HostPlatformName { get; init; }
+
+        [JsonPropertyName("Platform")]
+        public required string Platform { get; init; }
+
+        [JsonPropertyName("QuickChat")]
+        public required QuickChatModes QuickChat { get; init; }
+
+        [JsonPropertyName("Age")]
+        public required int Age { get; init; }
+
+        [JsonPropertyName("MaxPlayers")]
+        public required int MaxPlayers { get; init; }
+
+        [JsonPropertyName("NumImpostors")]
+        public required int NumImpostors { get; init; }
+
+        [JsonPropertyName("MapId")]
+        public required string MapId { get; init; }
+
+        [JsonPropertyName("Language")]
+        public required string Language { get; init; }
+
+        [JsonPropertyName("GameState")]
+        public required GameStates GameState { get; init; }
+
+        public static GameListingAll From(IGame game)
+        {
+            var platform = game.Host?.Client.PlatformSpecificData;
+
+            return new GameListingAll
+            {
+                Ip = ConvertAddressToNumber(game.PublicIp.Address),
+                Port = (ushort)game.PublicIp.Port,
+                GameId = game.Code,
+                PlayerCount = game.PlayerCount,
+                HostName = game.DisplayName ?? game.Host?.Client.Name ?? "Unknown host",
+                TrueHostName = game.DisplayName ?? game.Host?.Client.Name ?? "Unknown host",
+                HostPlatformName = platform?.PlatformName ?? string.Empty,
+                Platform = (platform?.Platform ?? Platforms.Unknown).ToString(),
+                QuickChat = game.Host?.Client.ChatMode ?? QuickChatModes.QuickChatOnly,
+                Age = 0,
+                MaxPlayers = game.Options.MaxPlayers,
+                NumImpostors = game.Options.NumImpostors,
+                MapId = game.Options.Map.ToString(),
+                Language = game.Options.Keywords.ToString(),
+                GameState = game.GameState,
             };
         }
     }
