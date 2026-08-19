@@ -193,6 +193,10 @@ public sealed class ListingManager
                             }
 
                             break;
+                        case "mod":
+                            // Accept the mod registration filter for protocol compatibility.
+                            // Mod-specific lobby filtering is not implemented yet.
+                            break;
                     }
 
                     if (!matchesAllFilters)
