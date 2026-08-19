@@ -74,8 +74,9 @@ namespace Impostor.Api.Innersloth.GameFilters
                         return JsonSerializer.Deserialize<BoolGameFilter>(filterString)
                                ?? throw new InvalidOperationException("Deserialization returned null for BoolGameFilter");
                     case "mod":
-                        return JsonSerializer.Deserialize<ModGameFilter>(filterString)
-                               ?? throw new InvalidOperationException("Deserialization returned null for ModGameFilter");
+                        // Mod filters are accepted for protocol compatibility, but not evaluated yet.
+                        // Current clients may omit their payload, so do not deserialize it.
+                        return new ModGameFilter();
                     default:
                         throw new InvalidOperationException("No type matches subfilter");
                 }
