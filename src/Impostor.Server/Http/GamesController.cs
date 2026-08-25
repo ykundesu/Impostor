@@ -11,7 +11,6 @@ using Impostor.Api.Games;
 using Impostor.Api.Games.Managers;
 using Impostor.Api.Innersloth;
 using Impostor.Api.Innersloth.GameFilters;
-using Impostor.Hazel.UPnP;
 using Impostor.Server.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -37,6 +36,7 @@ public sealed class GamesController : ControllerBase
     /// <param name="gameManager">GameManager containing a list of games.</param>
     /// <param name="listingManager">ListingManager responsible for filtering.</param>
     /// <param name="serverConfig">Impostor configuration section containing the public ip address of this server.</param>
+    /// <param name="logger">DI injected logger.</param>
     public GamesController(IGameManager gameManager, ListingManager listingManager, IOptions<ServerConfig> serverConfig, ILogger<GamesController> logger)
     {
         _gameManager = gameManager;
@@ -126,7 +126,7 @@ public sealed class GamesController : ControllerBase
     {
         if (string.IsNullOrEmpty(filter))
         {
-            return BadRequest(new MatchmakerResponse(new MatchmakerError(DisconnectReason.ServerError, "filter query para not provided")));
+            return BadRequest(new MatchmakerResponse(new MatchmakerError(DisconnectReason.ServerError, "filter query parameter not provided")));
         }
 
         try
@@ -137,9 +137,11 @@ public sealed class GamesController : ControllerBase
             // filterSets wont be null. It must at least have ChatFilter and LangFilter
             // Vanilla game only builds one filterSet and InnerSloth officials only handles first one (though you can send multiple filter sets. sloths only handle the first)
             if (filtersList == null || filtersList.FilterSets.Count != 1
-                || filtersList.FilterSets[0].Filters.Count < 0)
+                || filtersList.FilterSets[0].Filters.Count < 2
+                || !filtersList.FilterSets[0].Filters.Any(x => x.OptionType == "languages")
+                || !filtersList.FilterSets[0].Filters.Any(x => x.OptionType == "chat"))
             {
-                return BadRequest(new MatchmakerResponse(new MatchmakerError(DisconnectReason.ServerError, "Invaild filterSets")));
+                return BadRequest(new MatchmakerResponse(new MatchmakerError(DisconnectReason.ServerError, "Invalid filterSets")));
             }
 
             var filteredGames = _listingManager.FindListingsV2(HttpContext, filtersList);
@@ -163,7 +165,7 @@ public sealed class GamesController : ControllerBase
         }
         catch (Exception ex)
         {
-            return BadRequest(new MatchmakerResponse(new MatchmakerError(DisconnectReason.ServerError, "Unknown excpetion caught in filter" + ex)));
+            return BadRequest(new MatchmakerResponse(new MatchmakerError(DisconnectReason.ServerError, "Unknown exception caught in filter" + ex)));
         }
     }
 

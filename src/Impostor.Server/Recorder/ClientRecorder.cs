@@ -52,7 +52,7 @@ namespace Impostor.Server.Recorder
             await base.HandleMessageAsync(reader, messageType);
 
             // Player created a game.
-            if (reader.Tag == MessageFlags.HostGame)
+            if (reader.Tag == MessageFlags.HostGame || reader.Tag == MessageFlags.HostModdedGame)
             {
                 _createdGame = true;
             }

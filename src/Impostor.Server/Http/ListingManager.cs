@@ -114,7 +114,7 @@ public sealed class ListingManager
         var result = new List<IGame>();
         var resultCount = 0;
 
-        // Not sure what is this. Used for Reacotr.Impostor?
+        // Apply custom filters from API
         var filters = _listingFilters.Select(f => f.GetFilter(ctx)).ToArray();
 
         foreach (var game in _gameManager.Games)
@@ -153,6 +153,13 @@ public sealed class ListingManager
                             }
 
                             break;
+                        case "languages":
+                            if (filter.SubFilter is LanguageFilter langFilter && game.Options.Keywords != (GameKeywords)langFilter.AcceptedValues)
+                            {
+                                matchesAllFilters = false;
+                            }
+
+                            break;
                         case "int":
                             if (filter.SubFilter is IntGameFilter intFilter)
                             {
@@ -185,6 +192,10 @@ public sealed class ListingManager
                                 }
                             }
 
+                            break;
+                        case "mod":
+                            // Accept the mod registration filter for protocol compatibility.
+                            // Mod-specific lobby filtering is not implemented yet.
                             break;
                     }
 
