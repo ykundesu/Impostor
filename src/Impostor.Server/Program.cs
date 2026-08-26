@@ -230,6 +230,11 @@ namespace Impostor.Server
 
                     builder.Configure(app =>
                     {
+                        app.UseRouting();
+
+                        // Use CORS middleware
+                        app.UseCors("AllowAll");
+
                         var pluginLoaderService = app.ApplicationServices.GetRequiredService<PluginLoaderService>();
                         foreach (var pluginInformation in pluginLoaderService.Plugins)
                         {
@@ -238,11 +243,6 @@ namespace Impostor.Server
                                 httpStartup.ConfigureWebApplication(app);
                             }
                         }
-
-                        app.UseRouting();
-
-                        // Use CORS middleware
-                        app.UseCors("AllowAll");
 
                         app.UseEndpoints(endpoints =>
                         {
