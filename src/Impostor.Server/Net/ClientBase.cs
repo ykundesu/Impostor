@@ -1,10 +1,12 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Impostor.Api;
 using Impostor.Api.Innersloth;
 using Impostor.Api.Innersloth.Customization;
 using Impostor.Api.Net;
+using Impostor.Api.Net.Messages.S2C;
 using Impostor.Server.Net.State;
 
 namespace Impostor.Server.Net
@@ -15,6 +17,11 @@ namespace Impostor.Server.Net
         private DisconnectReason? _pendingDisconnectReason;
         private string? _pendingDisconnectDetail;
         private string? _pendingCustomDisconnectMessage;
+        private bool _remoteDisconnectHasPayload;
+        private bool _remoteDisconnectParseFailed;
+        private DisconnectReason? _remoteDisconnectReason;
+        private string? _remoteDisconnectCustomMessage;
+        private int _remoteDisconnectPayloadLength;
 
         protected ClientBase(string name, GameVersion gameVersion, Language language, QuickChatModes chatMode, PlatformSpecificData platformSpecificData, IHazelConnection connection)
         {
@@ -115,6 +122,56 @@ namespace Impostor.Server.Net
             lock (_pendingDisconnectLock)
             {
                 return _pendingDisconnectReason == reason ? _pendingDisconnectDetail : null;
+            }
+        }
+
+        internal void CaptureRemoteDisconnectPayload(IMessageReader? reader)
+        {
+            lock (_pendingDisconnectLock)
+            {
+                _remoteDisconnectHasPayload = false;
+                _remoteDisconnectParseFailed = false;
+                _remoteDisconnectReason = null;
+                _remoteDisconnectCustomMessage = null;
+                _remoteDisconnectPayloadLength = reader == null ? 0 : reader.Length - reader.Position;
+
+                if (reader == null || reader.Position >= reader.Length)
+                {
+                    return;
+                }
+
+                try
+                {
+                    MessageDisconnect.Deserialize(reader, out var hasReason, out var reason, out var message);
+                    _remoteDisconnectHasPayload = hasReason;
+                    _remoteDisconnectReason = reason;
+                    _remoteDisconnectCustomMessage = message;
+                }
+                catch (Exception)
+                {
+                    _remoteDisconnectParseFailed = true;
+                }
+            }
+        }
+
+        protected (bool HasPayload, bool ParseFailed, DisconnectReason? Reason, string? CustomMessage, int PayloadLength) ConsumeRemoteDisconnectPayload()
+        {
+            lock (_pendingDisconnectLock)
+            {
+                var result = (
+                    _remoteDisconnectHasPayload,
+                    _remoteDisconnectParseFailed,
+                    _remoteDisconnectReason,
+                    _remoteDisconnectCustomMessage,
+                    _remoteDisconnectPayloadLength);
+
+                _remoteDisconnectHasPayload = false;
+                _remoteDisconnectParseFailed = false;
+                _remoteDisconnectReason = null;
+                _remoteDisconnectCustomMessage = null;
+                _remoteDisconnectPayloadLength = 0;
+
+                return result;
             }
         }
 

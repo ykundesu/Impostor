@@ -131,27 +131,56 @@ namespace Impostor.Server.Net
                 case MessageFlags.HostGame:
                 case MessageFlags.HostModdedGame:
                 {
-                    // Read game settings.
                     IGameOptions gameOptions;
                     GameFilterOptions gameFilterOptions;
 
-                    if (flag == MessageFlags.HostModdedGame)
+                    try
                     {
-                        Message25HostModdedGameC2S.Deserialize(reader, out gameOptions, out _, out gameFilterOptions, out _);
+                        if (flag == MessageFlags.HostModdedGame)
+                        {
+                            Message25HostModdedGameC2S.Deserialize(reader, out gameOptions, out _, out gameFilterOptions, out _);
+                        }
+                        else
+                        {
+                            Message00HostGameC2S.Deserialize(reader, out gameOptions, out _, out gameFilterOptions);
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        Message00HostGameC2S.Deserialize(reader, out gameOptions, out _, out gameFilterOptions);
+                        _logger.LogError(
+                            ex,
+                            "Client {Name} ({Id}) sent an invalid {Flag} packet, disconnecting",
+                            Name,
+                            Id,
+                            MessageFlags.FlagToString(flag));
+                        await DisconnectAsync(DisconnectReason.Custom, "The server could not parse the host game request.");
+                        return;
                     }
 
-                    // Create game.
-                    var game = await _gameManager.CreateAsync(this, gameOptions, gameFilterOptions);
+                    IGame? game;
+                    try
+                    {
+                        game = await _gameManager.CreateAsync(this, gameOptions, gameFilterOptions);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Client {Name} ({Id}) failed to create a game", Name, Id);
+                        await DisconnectAsync(DisconnectReason.ServerError);
+                        return;
+                    }
 
                     if (game == null)
                     {
                         await DisconnectAsync(DisconnectReason.GameNotFound);
                         return;
                     }
+
+                    _logger.LogInformation(
+                        "Client {Name} ({Id}) created game {Code} via {Flag}",
+                        Name,
+                        Id,
+                        game.Code,
+                        MessageFlags.FlagToString(flag));
 
                     // Code in the packet below will be used in JoinGame.
                     using (var writer = MessageWriter.Get(MessageType.Reliable))
@@ -461,13 +490,16 @@ namespace Impostor.Server.Net
             var customReason = expectedReason == reason && disconnectContext.Reason == DisconnectReason.Custom
                 ? disconnectContext.CustomMessage
                 : null;
+            var isRemote = reason == "The remote sent a disconnect request";
+            var remotePayload = ConsumeRemoteDisconnectPayload();
+            var gameCode = Player?.Game.Code.ToString();
 
             try
             {
                 if (Player != null)
                 {
-                    // The client never sends over the real disconnect reason so we always assume ExitGame
-                    var isRemote = reason == "The remote sent a disconnect request";
+                    // Among Us does send a disconnect reason in the Hazel payload, but older Impostor
+                    // builds ignored it and treated every remote disconnect as ExitGame.
                     await Player.Game.HandleRemovePlayer(Id, isRemote ? DisconnectReason.ExitGame : DisconnectReason.Error);
                 }
             }
@@ -476,21 +508,42 @@ namespace Impostor.Server.Net
                 _logger.LogError(ex, "Exception caught in client disconnection.");
             }
 
-            if (!string.IsNullOrWhiteSpace(detail) && !string.IsNullOrWhiteSpace(customReason))
+            if (isRemote && remotePayload.ParseFailed)
             {
-                _logger.LogInformation("Client {0} disconnecting, reason: {1}, detail: {2}, custom reason: {3}", Id, reason, detail, customReason);
+                _logger.LogInformation(
+                    "Client {Name} ({Id}) disconnecting, reason: {Reason}, game: {Game}, amongUsPayload: unparsable ({PayloadLength} bytes)",
+                    Name,
+                    Id,
+                    reason,
+                    gameCode ?? "(none)",
+                    remotePayload.PayloadLength);
+            }
+            else if (isRemote && (remotePayload.HasPayload || remotePayload.PayloadLength > 0))
+            {
+                _logger.LogInformation(
+                    "Client {Name} ({Id}) disconnecting, reason: {Reason}, game: {Game}, amongUsReason: {AmongUsReason}, customMessage: {CustomMessage}",
+                    Name,
+                    Id,
+                    reason,
+                    gameCode ?? "(none)",
+                    remotePayload.HasPayload ? remotePayload.Reason?.ToString() ?? "(null)" : "(none)",
+                    remotePayload.CustomMessage);
+            }
+            else if (!string.IsNullOrWhiteSpace(detail) && !string.IsNullOrWhiteSpace(customReason))
+            {
+                _logger.LogInformation("Client {Name} ({Id}) disconnecting, reason: {Reason}, game: {Game}, detail: {Detail}, custom reason: {CustomReason}", Name, Id, reason, gameCode ?? "(none)", detail, customReason);
             }
             else if (!string.IsNullOrWhiteSpace(detail))
             {
-                _logger.LogInformation("Client {0} disconnecting, reason: {1}, detail: {2}", Id, reason, detail);
+                _logger.LogInformation("Client {Name} ({Id}) disconnecting, reason: {Reason}, game: {Game}, detail: {Detail}", Name, Id, reason, gameCode ?? "(none)", detail);
             }
             else if (!string.IsNullOrWhiteSpace(customReason))
             {
-                _logger.LogInformation("Client {0} disconnecting, reason: {1}, custom reason: {2}", Id, reason, customReason);
+                _logger.LogInformation("Client {Name} ({Id}) disconnecting, reason: {Reason}, game: {Game}, custom reason: {CustomReason}", Name, Id, reason, gameCode ?? "(none)", customReason);
             }
             else
             {
-                _logger.LogInformation("Client {0} disconnecting, reason: {1}", Id, reason);
+                _logger.LogInformation("Client {Name} ({Id}) disconnecting, reason: {Reason}, game: {Game}", Name, Id, reason, gameCode ?? "(none)");
             }
 
             _clientManager.Remove(this);

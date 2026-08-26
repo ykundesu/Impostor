@@ -57,6 +57,11 @@ namespace Impostor.Server.Net.Hazel
 
         private async ValueTask ConnectionOnDisconnected(DisconnectedEventArgs e)
         {
+            if (e.Reason == "The remote sent a disconnect request" && Client is ClientBase clientBase)
+            {
+                clientBase.CaptureRemoteDisconnectPayload(e.Message);
+            }
+
             if (Client != null)
             {
                 await Client.HandleDisconnectAsync(e.Reason);
