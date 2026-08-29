@@ -21,13 +21,15 @@ public sealed class ListingManager
     private readonly IEnumerable<IListingFilter> _listingFilters;
     private readonly ICompatibilityManager _compatibilityManager;
     private readonly CompatibilityConfig _compatibilityConfig;
+    private readonly HttpServerConfig _httpServerConfig;
 
-    public ListingManager(IGameManager gameManager, IEnumerable<IListingFilter> listingFilters, ICompatibilityManager compatibilityManager, IOptions<CompatibilityConfig> compatibilityConfig)
+    public ListingManager(IGameManager gameManager, IEnumerable<IListingFilter> listingFilters, ICompatibilityManager compatibilityManager, IOptions<CompatibilityConfig> compatibilityConfig, IOptions<HttpServerConfig> httpServerConfig)
     {
         _gameManager = gameManager;
         _listingFilters = listingFilters;
         _compatibilityManager = compatibilityManager;
         _compatibilityConfig = compatibilityConfig.Value;
+        _httpServerConfig = httpServerConfig.Value;
     }
 
     /// <summary>
@@ -49,7 +51,7 @@ public sealed class ListingManager
         var compatibleGames = new List<IGame>();
 
         // We want to add 2 types of games
-        // 1. Desireable games that the player wants to play (right language, right map, desired impostor amount)
+        // 1. Desireable games that the player wants to play (right map, desired impostor amount, and language unless ignored)
         // 2. Failing that, display compatible games the player could join (public games with spots available)
 
         // .Where filters out games that can't be joined.
@@ -154,7 +156,9 @@ public sealed class ListingManager
 
                             break;
                         case "languages":
-                            if (filter.SubFilter is LanguageFilter langFilter && game.Options.Keywords != (GameKeywords)langFilter.AcceptedValues)
+                            if (!_httpServerConfig.IgnoreLanguageFilter
+                                && filter.SubFilter is LanguageFilter langFilter
+                                && game.Options.Keywords != (GameKeywords)langFilter.AcceptedValues)
                             {
                                 matchesAllFilters = false;
                             }
@@ -244,7 +248,7 @@ public sealed class ListingManager
         };
     }
 
-    private static bool IsGameDesired(IGame game, int map, int impostorCount, GameKeywords language)
+    private bool IsGameDesired(IGame game, int map, int impostorCount, GameKeywords language)
     {
         if ((map & (1 << (int)game.Options.Map)) == 0)
         {
@@ -252,6 +256,11 @@ public sealed class ListingManager
         }
 
         if (impostorCount != 0 && game.Options.NumImpostors != impostorCount)
+        {
+            return false;
+        }
+
+        if (!_httpServerConfig.IgnoreLanguageFilter && game.Options.Keywords != language)
         {
             return false;
         }
