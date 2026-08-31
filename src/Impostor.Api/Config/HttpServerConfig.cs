@@ -24,4 +24,9 @@ public class HttpServerConfig
     /// </summary>
     /// For port forwarding purposes, this is a TCP port.
     public ushort ListenPort { get; set; } = 22023;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether lobby search should ignore the client's chat language filter.
+    /// </summary>
+    public bool IgnoreLanguageFilter { get; set; } = true;
 }

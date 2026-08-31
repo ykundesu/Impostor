@@ -15,11 +15,13 @@
 
 Impostor has an Http Server that is used by recent versions of Among Us to connect to. See [the Http Server page](Http-server.md) for more details on how to set this up.
 
-| Key            | Default   | Description                                                                                                                                                                |
-|----------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Enabled**    | `true`    | Whether the http server should be enabled.                                                                                                                                 |
-| **ListenIp**   | `0.0.0.0` | The network interface to listen on. Use `127.0.0.1` if you use a reverse proxy or just run locally. Use `0.0.0.0` if you are directly exposing this server to the internet |
-| **ListenPort** | `22023`   | The listen port of this server. For port forwarding purposes, this is an TCP port.                                                                                         |
+| Key                        | Default   | Description                                                                                                                                                                |
+|----------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Enabled**                | `true`    | Whether the http server should be enabled.                                                                                                                                 |
+| **ListenIp**               | `0.0.0.0` | The network interface to listen on. Use `127.0.0.1` if you use a reverse proxy or just run locally. Use `0.0.0.0` if you are directly exposing this server to the internet |
+| **ListenPort**             | `22023`   | The listen port of this server. For port forwarding purposes, this is an TCP port.                                                                                         |
+| **IgnoreLanguageFilter**   | `true`    | If `true`, lobby search ignores the client's chat language filter so rooms with a different language still appear. Applies to both current (`/api/games/filtered`) and legacy (`GET /api/games`) listing. |
+
 
 ### AntiCheat
 
@@ -113,6 +115,7 @@ IMPOSTOR_Server__PublicIp=127.0.0.1
 IMPOSTOR_Server__PublicPort=22023
 IMPOSTOR_Server__ListenIp=0.0.0.0
 IMPOSTOR_Server__ListenPort=22023
+IMPOSTOR_HttpServer__IgnoreLanguageFilter=true
 IMPOSTOR_AntiCheat__Enabled=true
 IMPOSTOR_AntiCheat__BanIpFromGame=true
 IMPOSTOR_AntiCheat__EnableVoteBanOwnershipChecks=true
