@@ -62,6 +62,11 @@ public sealed class ListingManager
                 continue;
             }
 
+            if (game.ModGuid != null)
+            {
+                continue;
+            }
+
             if (!_compatibilityConfig.AllowVersionMixing &&
                 game.Host != null &&
                 _compatibilityManager.CanJoinGame(game.Host.Client.GameVersion, gameVersion) != GameJoinError.None)
@@ -141,6 +146,11 @@ public sealed class ListingManager
                     continue;
                 }
 
+                if (game.ModGuid != null && !filterSet.Filters.Any(f => f.OptionType == "mod"))
+                {
+                    continue;
+                }
+
                 var matchesAllFilters = true;
 
                 // Hard coded to only check map, languages, impostornum, chatmode, tags
@@ -200,6 +210,9 @@ public sealed class ListingManager
                         case "mod":
                             // Accept the mod registration filter for protocol compatibility.
                             // Mod-specific lobby filtering is not implemented yet.
+                            // NOTE: upstream filters by ModFilter/game.ModGuid here, but this fork
+                            // parses "mod" filters into ModGameFilter (see GameFilter.cs), so the
+                            // upstream check would never match. Kept as accept for now.
                             break;
                     }
 

@@ -43,6 +43,11 @@ namespace Impostor.Server.Net
                 return false;
             }
 
+            if (Player != null && Player.Game.ModGuid != null)
+            {
+                return false;
+            }
+
             if (Player != null && Player.IsHost)
             {
                 var isHostCheatingAllowed = _antiCheatConfig.AllowCheatingHosts switch {
@@ -133,12 +138,14 @@ namespace Impostor.Server.Net
                 {
                     IGameOptions gameOptions;
                     GameFilterOptions gameFilterOptions;
+                    Guid? modGuid = null;
 
                     try
                     {
                         if (flag == MessageFlags.HostModdedGame)
                         {
-                            Message25HostModdedGameC2S.Deserialize(reader, out gameOptions, out _, out gameFilterOptions, out _);
+                            Message25HostModdedGameC2S.Deserialize(reader, out gameOptions, out _, out gameFilterOptions, out var parsedModGuid);
+                            modGuid = parsedModGuid;
                         }
                         else
                         {
@@ -160,7 +167,7 @@ namespace Impostor.Server.Net
                     IGame? game;
                     try
                     {
-                        game = await _gameManager.CreateAsync(this, gameOptions, gameFilterOptions);
+                        game = await _gameManager.CreateAsync(this, gameOptions, gameFilterOptions, modGuid);
                     }
                     catch (Exception ex)
                     {
@@ -181,6 +188,11 @@ namespace Impostor.Server.Net
                         Id,
                         game.Code,
                         MessageFlags.FlagToString(flag));
+
+                    if (modGuid != null)
+                    {
+                        _logger.LogInformation("Client {Name} ({Id}) hosted a modded game with mod GUID {ModGuid}.", Name, Id, modGuid);
+                    }
 
                     // Code in the packet below will be used in JoinGame.
                     using (var writer = MessageWriter.Get(MessageType.Reliable))
