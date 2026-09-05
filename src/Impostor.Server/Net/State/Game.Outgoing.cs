@@ -91,7 +91,7 @@ namespace Impostor.Server.Net.State
         private void WriteJoinedGameMessage(IMessageWriter message, bool clear, IClientPlayer player)
         {
             var players = _players
-                .Where(x => x.Value != player)
+                .Where(x => x.Value != player && x.Value.Limbo != LimboStates.PreSpawn)
                 .Select(x => x.Value)
                 .ToArray();
 
