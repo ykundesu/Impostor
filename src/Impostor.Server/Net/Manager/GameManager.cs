@@ -69,7 +69,10 @@ namespace Impostor.Server.Net.Manager
 
         public async ValueTask RemoveAsync(GameCode gameCode)
         {
-            if (_games.TryGetValue(gameCode, out var game) && game.PlayerCount > 0)
+            // Note: use Players.Any() instead of PlayerCount here. PlayerCount excludes
+            // players in PreSpawn limbo, but they still hold a slot in the game and
+            // must be kicked when the game is removed.
+            if (_games.TryGetValue(gameCode, out var game) && game.Players.Any())
             {
                 foreach (var player in game.Players)
                 {
