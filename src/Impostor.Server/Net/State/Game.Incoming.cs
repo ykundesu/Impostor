@@ -183,9 +183,9 @@ namespace Impostor.Server.Net.State
             }
 
             // Check if;
-            // - The player is already in this game.
+            // - The player is already in this lobby.
             // - The game is full.
-            if (player?.Game != this && PlayerCount >= Options.MaxPlayers)
+            if (player?.Limbo != LimboStates.NotLimbo && PlayerCount >= Options.MaxPlayers)
             {
                 return GameJoinResult.FromError(GameJoinError.GameFull);
             }
