@@ -97,7 +97,12 @@ namespace Impostor.Server.Net.State
 
         public IDictionary<object, object> Items { get; }
 
-        public int PlayerCount => _players.Count;
+        /// <summary>
+        /// Gets the number of players that are currently in the lobby or game.
+        /// Players still in <see cref="LimboStates.PreSpawn"/> limbo (e.g. did not rejoin
+        /// after the game ended) are not counted.
+        /// </summary>
+        public int PlayerCount => _players.Count(p => p.Value.Limbo != LimboStates.PreSpawn);
 
         public ClientPlayer? Host => _players.GetValueOrDefault(HostId);
 
