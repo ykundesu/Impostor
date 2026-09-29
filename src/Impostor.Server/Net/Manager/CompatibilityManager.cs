@@ -53,6 +53,7 @@ internal class CompatibilityManager : ICompatibilityManager
         new[]
         {
             new GameVersion(2026, 7, 20), // 2026.9.29 (build 7489, Steam)
+            new GameVersion(2026, 7, 21), // 2026.9.29 (build 7492, Android)
         },
     };
 
