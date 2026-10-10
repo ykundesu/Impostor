@@ -146,11 +146,8 @@ public sealed class ListingManager
                     continue;
                 }
 
-                if (game.ModGuid != null && !filterSet.Filters.Any(f => f.OptionType == "mod"))
-                {
-                    continue;
-                }
-
+                // Some modded clients omit the mod filter on their first search after startup.
+                // Accept missing mod filters, consistently with the compatibility-only "mod" case below.
                 var matchesAllFilters = true;
 
                 // Hard coded to only check map, languages, impostornum, chatmode, tags
